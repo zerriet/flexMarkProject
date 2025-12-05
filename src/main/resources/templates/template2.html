@@ -1,0 +1,42 @@
+<div class="report-content">
+    <h1>System Audit Log</h1>
+
+    <div class="meta-info">
+        <p><strong>Generated:</strong> {{generatedBy}} | <strong>Batch ID:</strong> {{batchId}}</p>
+    </div>
+
+    <h3>1. Preliminary Checks</h3>
+    <p class="spacer-text">
+        The following section details the initial health checks performed on the cluster.
+        These checks are lightweight and usually fit on the first page comfortably.
+    </p>
+
+    <md>
+        | Check ID | Component | Status |
+        | :--- | :--- | :--- |{{#each healthChecks}}
+        | **{{this.id}}** | {{this.component}} | {{this.status}} |{{/each}}
+    </md>
+
+    <h3>2. Transaction History</h3>
+    <p class="spacer-text">
+        The table below contains a high volume of transaction records.
+        <strong>TEST CRITERIA:</strong> Depending on the amount of text above, there should not be enough space
+        remaining on this page to fit this entire table. Because we set <code>page-break-inside: avoid</code>
+        in the CSS, the PDF engine should detect this constraint and push the <strong>entire table headers and rows</strong>
+        to the start of Page 2, rather than splitting it.
+    </p>
+
+    <p class="spacer-text">
+        (FILLER TEXT to consume vertical space) Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+        quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+    </p>
+
+    <md>
+        | Trans ID | Timestamp | User | Action | Result |
+        | :--- | :--- | :--- | :--- | :--- |{{#each transactions}}
+        | `{{this.id}}` | {{this.ts}} | {{this.user}} | {{this.action}} | {{this.result}} |{{/each}}
+    </md>
+
+    <p><em>End of Audit Log.</em></p>
+</div>

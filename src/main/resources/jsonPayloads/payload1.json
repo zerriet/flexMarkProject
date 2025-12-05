@@ -1,0 +1,26 @@
+{
+  "reportTitle": "Monthly System Health Report",
+  "generatedBy": "DevOps Team",
+  "period": "November 2025",
+  "summary_md": "### Executive Summary\nOverall system uptime was **99.98%**. We encountered *two* minor incidents involving latency in the `us-east-1` region.",
+  "incidents": [
+    {
+      "id": "INC-101",
+      "service": "Payment Gateway",
+      "status": "Resolved",
+      "severity": "High"
+    },
+    {
+      "id": "INC-102",
+      "service": "Notification Svc",
+      "status": "Monitoring",
+      "severity": "Low"
+    },
+    {
+      "id": "INC-103",
+      "service": "User Auth",
+      "status": "Resolved",
+      "severity": "Medium"
+    }
+  ]
+}

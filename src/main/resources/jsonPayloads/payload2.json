@@ -1,0 +1,34 @@
+{
+  "reportTitle": "System Audit Log",
+  "generatedBy": "Automated Runner",
+  "batchId": "BATCH-2025-X99",
+
+  "healthChecks": [
+    { "id": "CHK-01", "component": "Database", "status": "OK" },
+    { "id": "CHK-02", "component": "Cache", "status": "OK" },
+    { "id": "CHK-03", "component": "Auth Provider", "status": "OK" }
+  ],
+
+  "transactions": [
+    { "id": "TXN-1001", "ts": "10:00:01", "user": "admin", "action": "Login", "result": "Success" },
+    { "id": "TXN-1002", "ts": "10:00:05", "user": "system", "action": "CronJob", "result": "Success" },
+    { "id": "TXN-1003", "ts": "10:01:20", "user": "user_a", "action": "View", "result": "Success" },
+    { "id": "TXN-1004", "ts": "10:02:15", "user": "user_b", "action": "Edit", "result": "Failed" },
+    { "id": "TXN-1005", "ts": "10:05:00", "user": "admin", "action": "Config", "result": "Success" },
+    { "id": "TXN-1006", "ts": "10:06:45", "user": "system", "action": "Cleanup", "result": "Success" },
+    { "id": "TXN-1007", "ts": "10:10:10", "user": "user_c", "action": "Upload", "result": "Pending" },
+    { "id": "TXN-1008", "ts": "10:11:00", "user": "user_a", "action": "Logout", "result": "Success" },
+    { "id": "TXN-1009", "ts": "10:12:30", "user": "admin", "action": "Reboot", "result": "Skipped" },
+    { "id": "TXN-1010", "ts": "10:15:00", "user": "user_b", "action": "Retry", "result": "Success" },
+    { "id": "TXN-1011", "ts": "10:16:20", "user": "system", "action": "LogRot", "result": "Success" },
+    { "id": "TXN-1012", "ts": "10:18:00", "user": "user_d", "action": "Create", "result": "Success" },
+    { "id": "TXN-1013", "ts": "10:19:50", "user": "user_d", "action": "Delete", "result": "Blocked" },
+    { "id": "TXN-1014", "ts": "10:20:00", "user": "admin", "action": "Audit", "result": "Success" },
+    { "id": "TXN-1015", "ts": "10:22:15", "user": "user_e", "action": "Login", "result": "Success" },
+    { "id": "TXN-1016", "ts": "10:25:30", "user": "user_e", "action": "Query", "result": "Timeout" },
+    { "id": "TXN-1017", "ts": "10:30:00", "user": "system", "action": "Backup", "result": "Started" },
+    { "id": "TXN-1018", "ts": "10:35:00", "user": "system", "action": "Backup", "result": "Finished" },
+    { "id": "TXN-1019", "ts": "10:40:00", "user": "admin", "action": "Report", "result": "Generated" },
+    { "id": "TXN-1020", "ts": "10:45:00", "user": "user_f", "action": "Export", "result": "Success" }
+  ]
+}
