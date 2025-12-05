@@ -1,59 +1,37 @@
-Java Hybrid Document Generator
-1. Project Overview
-This application is a specialized microservice designed to generate high-fidelity PDFs using a "Template-First" hybrid approach. It solves the common problem of needing complex layout control (HTML/CSS) combined with dynamic, user-friendly content formatting (Markdown).
+# Java Hybrid Document Generator
 
-Core Philosophy
-Layout is HTML: Headers, footers, columns, and page breaks are handled by standard HTML templates (via Handlebars).
+## Project Overview
+This application is a specialized microservice that generates high-fidelity PDFs using a **template-first hybrid** approach. It combines strict HTML/CSS layout control with **Markdown** for dynamic, user-friendly content formatting.
 
-Content is Markdown: Dynamic text, lists, and tables are written in Markdown, allowing for clean data loops without messy HTML string concatenation.
+### Core Philosophy
+- **Layout is HTML:** Headers, footers, columns, and page breaks are handled by Handlebars-driven HTML templates.
+- **Content is Markdown:** Dynamic text, lists, and tables stay as Markdown for clean data loops without brittle string concatenation.
 
-2. Architecture Pipeline
-The service follows a strict 5-stage pipeline to ensure security and formatting compliance:
+## Architecture Pipeline
+The service follows a strict **5-stage pipeline** to ensure security and formatting compliance:
 
-Sanitization: User input is recursively scrubbed using Jsoup.clean() to prevent XSS attacks before processing.
+1) **Sanitization:** User input is recursively scrubbed with `Jsoup.clean()` to prevent XSS before processing.
+2) **Templating (Handlebars):** Data merges into the HTML structure; loops expand while embedded content remains raw Markdown.
+3) **DOM Processing (Jsoup & Flexmark):**
+   - Parse the hybrid string into a Jsoup `Document`.
+   - Locate custom `<md>` tags.
+   - Render the enclosed Markdown to HTML via Flexmark.
+   - Replace each `<md>` node in place with the rendered HTML nodes.
+4) **Assembly:** CSS, headers, and footers are injected directly into the DOM to ensure valid XHTML syntax for the renderer.
+5) **Rendering (Flying Saucer):** The strict XHTML is converted to a PDF binary.
 
-Templating (Handlebars): Data is merged into the HTML structure. This step expands loops (e.g., iterating over a list of items) but leaves the content inside them as raw Markdown.
+## Recent Updates (v2.0 Optimization)
 
-DOM Processing (Jsoup & Flexmark):
+### Performance Refactor: Regex vs. DOM
+- **Previous:** Regex to find `<md>` blocks, then separate render + string concatenation to rebuild HTML (fragile and slow on large inputs).
+- **Current:** Single-pass parse into a Jsoup object model; traverse to replace `<md>` elements in place.
+- **Benefit:** Faster execution, lower memory overhead (no duplicate string buffers), and higher robustness against malformed tags.
 
-The hybrid string is parsed into a Jsoup Document.
+### CSS Compliance
+- **Engine:** `xhtmlrenderer` (Flying Saucer).
+- **Limitations:** Supports CSS 2.1 only (no Flexbox/Grid).
+- **Mitigation:** Silently ignores unsupported CSS 3 properties (e.g., `direction: ltr`) to avoid crashes while remaining compatible with modern CSS.
 
-The service locates custom <md> tags.
-
-Content inside tags is rendered to HTML using Flexmark.
-
-The <md> nodes are replaced with the rendered HTML nodes in-place.
-
-Assembly: CSS, Headers, and Footers are injected directly into the DOM to ensure valid XHTML syntax (required for the renderer).
-
-Rendering (Flying Saucer): The strict XHTML is converted to a PDF binary.
-
-3. Recent Updates (v2.0 Optimization)
-Performance Refactor: Regex vs. DOM
-Previous Implementation:
-
-Used Regex to find <md> blocks in a massive string.
-
-Rendered Markdown separately and used string concatenation to rebuild the HTML.
-
-Drawback: Fragile string manipulation; performance degradation on large files.
-
-Current Implementation:
-
-Single-Pass Parsing: The document is parsed into a Jsoup Object Model immediately after templating.
-
-In-Place Modification: We traverse the DOM tree to find <md> elements and replace them directly.
-
-Benefit: Faster execution, lower memory overhead (no duplicate string buffers), and significantly higher robustness against malformed tags.
-
-CSS Compliance
-Engine: Currently using xhtmlrenderer (Flying Saucer).
-
-Limitations: Strictly supports CSS 2.1 (No Flexbox/Grid).
-
-Mitigation: The service is configured to silently ignore unsupported CSS 3 properties (like direction: ltr) to prevent crashing, ensuring stability even with modern CSS frameworks.
-
-4. Technical Constraints
-Strict XHTML: All HTML tags must be closed (e.g., <br />, not <br>). The Jsoup assembly step enforces this automatically.
-
-CSS Support: Layouts must use float, table-cell, or position: absolute. Modern Flexbox layouts are not supported by the current rendering engine.
+## Technical Constraints
+- **Strict XHTML:** All HTML tags must be closed (e.g., `<br />`, not `<br>`). The Jsoup assembly step enforces this automatically.
+- **CSS support:** Layouts must use `float`, `table-cell`, or `position: absolute`; Flexbox layouts are **not** supported by the current rendering engine.
