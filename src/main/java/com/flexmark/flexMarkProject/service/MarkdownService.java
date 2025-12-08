@@ -3,6 +3,10 @@ package com.flexmark.flexMarkProject.service;
 import com.flexmark.flexMarkProject.dto.GenerateRequestDto;
 import com.github.jknack.handlebars.Handlebars;
 import com.github.jknack.handlebars.Template;
+import com.itextpdf.html2pdf.ConverterProperties;
+import com.itextpdf.html2pdf.HtmlConverter;
+import com.itextpdf.html2pdf.resolver.font.DefaultFontProvider;
+import com.itextpdf.layout.font.FontProvider;
 import com.vladsch.flexmark.ext.attributes.AttributesExtension;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
 import com.vladsch.flexmark.html.HtmlRenderer;
@@ -13,17 +17,13 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.jsoup.safety.Safelist;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.xhtmlrenderer.pdf.ITextRenderer;
-import org.xhtmlrenderer.pdf.ITextUserAgent;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
@@ -126,50 +126,39 @@ public class MarkdownService {
             configureFinalDom(doc, cssStr, headerStr, footerStr);
             String finalXHtml = doc.html();
 
-            // Step 6: PDF Generation via Flying Saucer
+            // Step 6: PDF Generation via iText7 html2pdf
             try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-                ITextRenderer renderer = new ITextRenderer();
 
-                // ---------------------------------------------------------------------
-                // CUSTOM USER AGENT CONFIGURATION
-                // ---------------------------------------------------------------------
-                // We typically use NaiveUserAgent for Swing, but for PDF generation we MUST
-                // use ITextUserAgent. Failing to do so causes a ClassCastException because
-                // the PDF renderer expects ITextFSImage objects, not AWT objects.
-                ITextUserAgent callback = new ITextUserAgent(renderer.getOutputDevice()) {
-                    @Override
-                    public byte[] getBinaryResource(String uri) {
-                        // SECURITY: SSRF Protection
-                        // Block the renderer from fetching external URLs to prevent leaking internal data.
-                        if (uri.startsWith("http://") || uri.startsWith("https://")) {
-                            System.out.println("Blocked external resource request: " + uri);
-                            return new byte[0]; // Return empty image
-                        }
+                // The ConverterProperties object holds configuration for the PDF conversion process.
+                ConverterProperties properties = new ConverterProperties();
 
-                        // FEATURE: Local Classpath Loading
-                        // Allows templates to reference images like: <img src="classpath:static/logo.png" />
-                        if (uri.startsWith("classpath:")) {
-                            return loadFromClasspath(uri);
-                        }
+                // A FontProvider is crucial for managing fonts, especially custom or non-standard ones.
+                // DefaultFontProvider is a standard implementation that can be configured to discover
+                // fonts from various system locations.
+                FontProvider fontProvider = new DefaultFontProvider(false, true, false);
+                properties.setFontProvider(fontProvider);
 
-                        // Fallback for standard relative paths (if applicable)
-                        return super.getBinaryResource(uri);
-                    }
-                };
+                //Get the real URL to the "static" folder from the ClassLoader
+                java.net.URL staticUrl = getClass().getClassLoader().getResource("static/");
 
-                // Link the custom agent to the renderer's context
-                callback.setSharedContext(renderer.getSharedContext());
-                renderer.getSharedContext().setUserAgentCallback(callback);
+                //Set the Base URI
+                if (staticUrl != null) {
+                    // This converts "classpath:/static/" to a concrete path like:
+                    // "file:/C:/Project/target/classes/static/" (Local)
+                    // "jar:file:/app.jar!/BOOT-INF/classes/static/" (Docker/Prod)
+                    properties.setBaseUri(staticUrl.toString());
+                } else {
+                    // Fallback (though this usually means the folder is empty or missing)
+                    properties.setBaseUri("classpath:/static/");
+                }
 
-                renderer.setDocumentFromString(finalXHtml);
-                renderer.layout();
-                renderer.createPDF(outputStream);
-                renderer.finishPDF();
+                // This is the core iText7 conversion call. It takes the final HTML string,
+                // a stream to write the PDF to, and the configuration properties.
+                HtmlConverter.convertToPdf(doc.html(), outputStream, properties);
 
                 return new InputStreamResource(
                         new ByteArrayInputStream(outputStream.toByteArray())
                 );
-
             }
         } catch (IOException e) {
             throw new RuntimeException("Error during template compilation or IO", e);
@@ -178,28 +167,6 @@ public class MarkdownService {
         }
     }
 
-    /**
-     * Helper to load bytes from the resources folder.
-     * Extracts path from "classpath:path/to/file.png".
-     */
-    private byte[] loadFromClasspath(String uri) {
-        try {
-            String path = uri.substring("classpath:".length());
-            ClassPathResource resource = new ClassPathResource(path);
-
-            if (!resource.exists()) {
-                System.err.println("Resource not found: " + path);
-                return new byte[0];
-            }
-
-            try (InputStream is = resource.getInputStream()) {
-                return is.readAllBytes();
-            }
-        } catch (IOException e) {
-            System.err.println("Error loading classpath resource: " + uri);
-            return new byte[0];
-        }
-    }
     /**
      * Recursively scrubs unsafe HTML from the input data map.
      * <p>
@@ -298,7 +265,8 @@ public class MarkdownService {
         // Inject CSS
         if (cssStr != null && !cssStr.isBlank()) {
             Element style = doc.head().appendElement("style");
-            style.append("<![CDATA[\n" + cssStr + "\n]]>");
+            style.html(cssStr);
+//            style.append("<![CDATA[\n" + cssStr + "\n]]>");
         }
 
         // Inject Footer (prepended first so header appears on top)
