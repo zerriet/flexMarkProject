@@ -1,0 +1,66 @@
+flowchart TD
+    Start([API Request<br/>POST /api/content/submit]) --> Decode[Stage 1: Input Decoding]
+    
+    Decode --> DecodeTemplate[Decode templateEncoded<br/>Base64 → HTML]
+    Decode --> DecodeCSS[Decode cssEncoded<br/>Base64 → CSS]
+    Decode --> DecodeHeader[Decode headerEncoded<br/>Base64 → HTML]
+    Decode --> DecodeFooter[Decode footerEncoded<br/>Base64 → HTML]
+    Decode --> DecodeImage[Decode imageEncoded<br/>Base64 → Image Data]
+    Decode --> GetData[Extract docPropertiesJsonData<br/>Trusted Server-Side Data]
+    
+    DecodeTemplate --> ImageCheck{imageEncoded<br/>provided?}
+    DecodeCSS --> ImageCheck
+    DecodeHeader --> ImageCheck
+    DecodeFooter --> ImageCheck
+    DecodeImage --> ImageCheck
+    GetData --> ImageCheck
+    
+    ImageCheck -->|Yes| ImagePreProcess[Stage 2: Image Pre-Processing]
+    ImageCheck -->|No| Handlebars[Stage 3: Templating Handlebars]
+    
+    ImagePreProcess --> ValidateImage[Validate Image Type<br/>PNG/JPG/SVG only]
+    ValidateImage -->|Valid| ProcessHeader[Process Header HTML<br/>Replace img src with data URI]
+    ValidateImage -->|Invalid| FallbackStatic[Use Static Images<br/>from resources/static/]
+    ProcessHeader --> ProcessFooter[Process Footer HTML<br/>Replace img src with data URI]
+    ProcessFooter --> Handlebars
+    FallbackStatic --> Handlebars
+    
+    Handlebars --> MergeData[Merge docPropertiesJsonData<br/>into Handlebars Template]
+    MergeData --> ExpandLoops[Expand Loops & Conditionals<br/> for, each in markdown tables etc.]
+    ExpandLoops --> HybridOutput[Output: Hybrid HTML/Markdown<br/>Template structure + Raw Markdown]
+
+    HybridOutput --> DOMParse[Stage 4: DOM Processing<br/>Parse with Jsoup]
+    DOMParse --> FindMDTags[Locate &lt;md&gt; tags<br/>in Document]
+    FindMDTags --> RenderMarkdown[Render Markdown to HTML<br/>via Flexmark Parser]
+    RenderMarkdown --> ReplaceInPlace[Replace &lt;md&gt; nodes<br/>with rendered HTML in-place]
+    ReplaceInPlace --> PureHTML[Output: Pure HTML DOM<br/>All Markdown converted]
+
+    PureHTML --> Assembly[Stage 5: Assembly & Image Processing]
+    Assembly --> InjectCSS[Inject CSS into &lt;head&gt;<br/>from cssStr]
+    InjectCSS --> InjectFooter[Inject Footer into &lt;body&gt;<br/>prepend footerStr]
+    InjectFooter --> InjectHeader[Inject Header into &lt;body&gt;<br/>prepend headerStr]
+
+    InjectHeader --> ImageCheck2{imageEncoded<br/>provided?}
+    ImageCheck2 -->|Yes| ProcessAllImages[Process All &lt;img&gt; Tags<br/>Replace src with data URIs]
+    ImageCheck2 -->|No| EnforceXHTML[Enforce XHTML Compliance<br/>Auto-close tags, escape entities]
+    ProcessAllImages --> EnforceXHTML
+
+    EnforceXHTML --> ValidXHTML[Output: Valid XHTML DOM<br/>Ready for PDF Rendering]
+
+    ValidXHTML --> PDFRender[Stage 6: Rendering iText7]
+    PDFRender --> ConfigureProps[Configure ConverterProperties<br/>Set Base URI for static assets]
+    ConfigureProps --> ConvertToPDF[HtmlConverter.convertToPdf<br/>XHTML → PDF Binary]
+    ConvertToPDF --> PDFOutput[Output: PDF Binary Stream<br/>Content-Type: application/pdf]
+
+    PDFOutput --> End([Response<br/>PDF Document])
+
+    style Start fill:#e1f5ff
+    style End fill:#c8e6c9
+    style ImageCheck fill:#fff9c4
+    style ImageCheck2 fill:#fff9c4
+    style ValidateImage fill:#fff9c4
+    style FallbackStatic fill:#ffccbc
+    style Handlebars fill:#e1bee7
+    style DOMParse fill:#b3e5fc
+    style Assembly fill:#c5cae9
+    style PDFRender fill:#f8bbd0

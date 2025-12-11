@@ -17,6 +17,7 @@ public class GenerateRequestDto implements Serializable{
     private String templateEncoded;
     private String templateName;
     private String cssEncoded;
+    private String imageEncoded;
     // CHANGED: Split into two separate fields
     private String headerEncoded;
     private String footerEncoded;
