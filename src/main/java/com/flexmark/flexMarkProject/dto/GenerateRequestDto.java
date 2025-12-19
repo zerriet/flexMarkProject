@@ -20,5 +20,6 @@ public class GenerateRequestDto implements Serializable{
     // CHANGED: Split into two separate fields
     private String headerEncoded;
     private String footerEncoded;
+    private String imageEncoded;
     private Map<String,Object> docPropertiesJsonData;
 }
