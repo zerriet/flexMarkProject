@@ -26,7 +26,7 @@ flowchart TD
     FallbackStatic --> Handlebars
     
     Handlebars --> MergeData[Merge docPropertiesJsonData<br/>into Handlebars Template]
-    MergeData --> ExpandLoops[Expand Loops & Conditionals<br/> for, each in markdown tables etc.]
+    MergeData --> ExpandLoops[Expand Loops & Conditionals<br/>{{#each}}, {{#if}}, etc.]
     ExpandLoops --> HybridOutput[Output: Hybrid HTML/Markdown<br/>Template structure + Raw Markdown]
 
     HybridOutput --> DOMParse[Stage 4: DOM Processing<br/>Parse with Jsoup]
