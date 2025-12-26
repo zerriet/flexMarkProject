@@ -31,9 +31,8 @@ Content-Type: application/json
 {
   "templateEncoded": "base64EncodedTemplate",
   "cssEncoded": "base64EncodedCSS",
-  "headerEncoded": "base64EncodedHeader",
-  "footerEncoded": "base64EncodedFooter",
-  "imageEncoded": "base64EncodedImage",  // Optional
+  "headerEncoded": "base64EncodedHeaderWithEmbeddedImages",
+  "footerEncoded": "base64EncodedFooterWithEmbeddedImages",
   "docPropertiesJsonData": {
     "title": "My Document",
     "items": [
@@ -42,6 +41,11 @@ Content-Type: application/json
     ]
   }
 }
+```
+
+**Note:** Images should be embedded directly in the HTML using data URIs:
+```html
+<img src="data:image/png;base64,iVBORw0KGgo..." />
 ```
 
 ### Response
@@ -106,7 +110,7 @@ flowchart TD
     FallbackStatic --> Handlebars
     
     Handlebars --> MergeData[Merge docPropertiesJsonData<br/>into Handlebars Template]
-    MergeData --> ExpandLoops[Expand Loops & Conditionals<br/>{{#each}}, {{#if}}, etc.]
+    MergeData --> ExpandLoops["Expand Loops & Conditionals<br/>Handlebars #each, #if, etc."]
     ExpandLoops --> HybridOutput[Output: Hybrid HTML/Markdown<br/>Template structure + Raw Markdown]
     
     HybridOutput --> DOMParse[Stage 5: DOM Processing<br/>Parse with Jsoup]
@@ -134,68 +138,75 @@ flowchart TD
     
     PDFOutput --> End([Response<br/>PDF Document])
     
-    style Start fill:#e1f5ff
-    style End fill:#c8e6c9
-    style Validate fill:#ffcdd2
-    style ValidateRequest fill:#ffcdd2
-    style ValidateTemplate fill:#ffcdd2
-    style Error1 fill:#ffccbc
-    style Error2 fill:#ffccbc
-    style ImageCheck fill:#fff9c4
-    style ImageCheck2 fill:#fff9c4
-    style ValidateImage fill:#fff9c4
-    style FallbackStatic fill:#ffccbc
-    style Handlebars fill:#e1bee7
-    style DOMParse fill:#b3e5fc
-    style Assembly fill:#c5cae9
-    style PDFRender fill:#f8bbd0
+    style Start fill:#2196F3,color:#fff
+    style End fill:#4CAF50,color:#fff
+    style Validate fill:#F44336,color:#fff
+    style ValidateRequest fill:#E91E63,color:#fff
+    style ValidateTemplate fill:#E91E63,color:#fff
+    style Error1 fill:#FF5722,color:#fff
+    style Error2 fill:#FF5722,color:#fff
+    style ImageCheck fill:#FFC107,color:#000
+    style ImageCheck2 fill:#FFC107,color:#000
+    style ValidateImage fill:#FF9800,color:#fff
+    style FallbackStatic fill:#FF9800,color:#fff
+    style Decode fill:#607D8B,color:#fff
+    style ImagePreProcess fill:#009688,color:#fff
+    style Handlebars fill:#9C27B0,color:#fff
+    style DOMParse fill:#00BCD4,color:#fff
+    style Assembly fill:#3F51B5,color:#fff
+    style PDFRender fill:#E91E63,color:#fff
 ```
 
 > **Note:** For a static image version, see [flexmark_flowchart.png](./flowchart/flexmark_flowchart.png)
 
 ### Pipeline Stages
 
-The service follows a strict **7-stage pipeline** to ensure formatting compliance and robust error handling:
+The service follows a strict **5-stage pipeline** to ensure formatting compliance and robust error handling:
 
 | Stage | Process | Output |
 |-------|---------|--------|
-| **1. Input Validation** | Validate request object is not null; ensure `templateEncoded` is provided and not empty | Validated request or error response |
-| **2. Input Decoding** | Decode Base64-encoded inputs (template, CSS, header, footer, image); handle decoding errors gracefully | Raw HTML/CSS strings |
-| **3. Image Pre-Processing** | Process header/footer HTML to replace `<img>` src with data URIs (if dynamic image provided) | Processed HTML strings |
-| **4. Templating (Handlebars)** | Merge data into HTML structure; loops expand while content remains raw Markdown | Hybrid HTML/Markdown string |
-| **5. DOM Processing** | Parse hybrid string → locate `<md>` tags → render Markdown → replace in-place | Pure HTML DOM |
-| **6. Assembly & Image Processing** | Inject CSS/headers/footers; update all `<img>` tags with data URIs (if needed) | Valid XHTML DOM |
-| **7. Rendering (iText7)** | Convert XHTML to PDF binary | PDF stream |
+| **1. Input Validation** | Validate request object is not null; ensure `templateEncoded` is provided and not empty (Jakarta Bean Validation) | Validated request or error response |
+| **2. Input Decoding** | Decode Base64-encoded inputs (template, CSS, header, footer); handle decoding errors gracefully | Raw HTML/CSS strings (with embedded data URI images) |
+| **3. Templating (Handlebars)** | Merge data into HTML structure; loops expand while content remains raw Markdown | Hybrid HTML/Markdown string |
+| **4. DOM Processing** | Parse hybrid string → locate `<md>` tags → render Markdown → replace in-place; inject CSS/headers/footers | Valid XHTML DOM |
+| **5. Rendering (iText7)** | Convert XHTML to PDF binary with secure resource retrieval (data URIs allowed, HTTP/HTTPS blocked) | PDF stream |
 
 > **Note:** Input sanitization is not performed as `docPropertiesJsonData` originates from server-side sources and is considered trusted. This design decision improves performance and preserves formatting flexibility.
 
 ### Key Pipeline Details
 
 **Stage 1 - Input Validation:**
-- Validates that the request object is not null
-- Ensures `templateEncoded` is provided and not empty
-- Returns descriptive error messages for validation failures
+- Jakarta Bean Validation at controller layer with `@Valid` annotation
+- Validates that `templateEncoded` is not blank
+- Returns 400 Bad Request with validation error details before reaching service layer
 - Prevents processing invalid requests early in the pipeline
 
-**Stage 4 - Templating:**
+**Stage 2 - Input Decoding:**
+- Decodes all Base64-encoded inputs (template, CSS, header, footer)
+- Images are already embedded as data URIs in the HTML (e.g., `<img src="data:image/png;base64,...">``)
+- No separate image processing required
+
+**Stage 3 - Templating:**
 - Data from `docPropertiesJsonData` is merged into the Handlebars template
 - Loops and conditionals expand while embedded Markdown content remains raw
 - Result is a hybrid HTML/Markdown string
 - Template compilation errors are caught and logged with context
 
-**Stage 5 - DOM Processing:**
+**Stage 4 - DOM Processing & Assembly:**
 - Parse the hybrid string into a Jsoup `Document`
-- Locate custom `<md>` tags
-- Render the enclosed Markdown to HTML via Flexmark
-- Optimized processing: filters empty lines and uses efficient string joining
+- Locate custom `<md>` tags and render enclosed Markdown to HTML via Flexmark
+- Preserves blank lines for proper paragraph separation
 - Replace each `<md>` node in place with the rendered HTML nodes
+- Inject CSS, headers, and footers directly into the DOM
+- Enforce XHTML syntax automatically for iText7 compatibility
 
-**Stage 6 - Assembly:**
-- CSS, headers, and footers are injected directly into the DOM
-- If a dynamic image was provided, all remaining `<img>` tags are updated with data URIs
-- Image processing uses shared validation logic for consistency
-- XHTML syntax is enforced automatically
-- Processing errors are logged with warnings, allowing graceful fallback to static images
+**Stage 5 - Rendering:**
+- Convert XHTML to PDF using iText7's HtmlConverter
+- **Secure Resource Retrieval:** Custom `SecureDataUriResourceRetriever` implementation
+  - ✅ Allows: Data URIs (Base64-encoded images) and local classpath resources
+  - ❌ Blocks: External HTTP/HTTPS requests (SSRF protection)
+- Data URIs are decoded and rendered natively by iText7
+- Static resources loaded from `resources/static/` directory
 
 ## API Reference
 
@@ -203,14 +214,13 @@ The service follows a strict **7-stage pipeline** to ensure formatting complianc
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `templateEncoded` | String | **Yes** | Base64-encoded HTML template with Handlebars syntax. Must not be null or empty. |
+| `templateEncoded` | String | **Yes** | Base64-encoded HTML template with Handlebars syntax. Must not be null or empty. Validated with `@NotBlank` annotation. |
 | `cssEncoded` | String | No | Base64-encoded CSS styles |
-| `headerEncoded` | String | No | Base64-encoded HTML header |
-| `footerEncoded` | String | No | Base64-encoded HTML footer |
-| `imageEncoded` | String | No | Base64-encoded image (PNG, JPG, or SVG). Supports data URIs, Base64-encoded strings, or raw Base64 data. |
-| `docPropertiesJsonData` | Map<String, Object> | No* | Dynamic data for Handlebars templating (server-side, trusted source). Defaults to empty map if null. |
+| `headerEncoded` | String | No | Base64-encoded HTML header. May contain `<img>` tags with data URI images embedded in `src` attributes. |
+| `footerEncoded` | String | No | Base64-encoded HTML footer. May contain `<img>` tags with data URI images embedded in `src` attributes. |
+| `docPropertiesJsonData` | Map<String, Object> | No | Dynamic data for Handlebars templating (server-side, trusted source). Defaults to empty map if null. |
 
-> **Note:** The service performs validation on incoming requests. Invalid requests (null request object or missing `templateEncoded`) will return an `IllegalArgumentException` with a descriptive error message.
+> **Note:** The service uses Jakarta Bean Validation. Invalid requests (missing or blank `templateEncoded`) will automatically return a 400 Bad Request with validation error details before reaching the service layer. This provides faster feedback and clearer error messages.
 
 ### Template Syntax
 
@@ -249,63 +259,172 @@ Wrap dynamic Markdown content in `<md>` tags:
 ## Image Handling
 
 ### Overview
-The service supports both **static** and **dynamic** images. Dynamic images take precedence when provided, with automatic fallback to static assets.
+Images are embedded in HTML using **data URIs** (Base64-encoded). Due to iText7 limitations with data URIs in headers/footers, the service **automatically extracts** data URI images and converts them to temporary files for reliable PDF rendering.
 
-### Static Images
-- **Location:** Place assets in `src/main/resources/static/`
+### Data URI Format
+Images should be embedded in `<img>` tags using the data URI format:
+```html
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA..." />
+```
+
+### Automatic Image Extraction
+
+**How It Works:**
+1. **Detection:** The service scans header/footer HTML for `<img>` tags with data URI `src` attributes
+2. **Extraction:** Base64 data is decoded and saved to `temp/images/` directory with UUID-based filenames
+3. **Rewriting:** The `img src` attribute is rewritten to reference the file path (e.g., `temp/images/abc-123.jpg`)
+4. **Rendering:** iText7 loads images from the file system for reliable PDF generation
+5. **Cleanup:** Temporary files are automatically deleted on application shutdown via shutdown hook
+
+**Example Transformation:**
+```html
+<!-- Input (in headerEncoded/footerEncoded): -->
+<img src="data:image/jpeg;base64,/9j/4AAQSkZJRg..." />
+
+<!-- After extraction: -->
+<img src="temp/images/82cdd817-299d-4e6c-a1dd-f9d52b22b38f.jpg" />
+```
+
+### Supported Formats
+- ✅ PNG: `data:image/png;base64,...` → `.png`
+- ✅ JPEG: `data:image/jpeg;base64,...` → `.jpg`
+- ✅ GIF: `data:image/gif;base64,...` → `.gif`
+- ✅ WebP: `data:image/webp;base64,...` → `.webp`
+- ✅ SVG: `data:image/svg+xml;base64,...` → `.svg`
+
+### Usage in Templates
+
+**Header/Footer with Images:**
+```html
+<!-- Header HTML (before Base64 encoding) -->
+<div id="header">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAA..." style="width: 100px;" />
+    <h1>Company Report</h1>
+</div>
+```
+
+Then Base64-encode the entire HTML and send in `headerEncoded` field. Images will be automatically extracted during processing.
+
+**Template with Images:**
+```handlebars
+<div class="logo">
+    <img src="data:image/png;base64,{{logoData}}" alt="Logo" />
+</div>
+```
+
+### Security: SSRF Protection
+
+The service implements a **custom secure resource retriever** that:
+- ✅ **Allows:** Local file URIs (for extracted images in `temp/images/`)
+- ✅ **Allows:** Local classpath resources (`file://`, `jar:file:`)
+- ❌ **Blocks:** External HTTP/HTTPS requests (prevents SSRF attacks)
+
+Any attempt to load external resources via `http://` or `https://` will be blocked with an error.
+
+### Temporary File Management
+
+**Directory:** `temp/images/` (relative to application working directory)
+
+**Lifecycle:**
+- Created automatically when first image is extracted
+- Files persist during application runtime
+- Automatically cleaned up on graceful shutdown via registered shutdown hook
+- Add `temp/` to `.gitignore` to avoid committing temporary files
+
+**Manual Cleanup:**
+If the application is forcefully terminated (Ctrl+C without graceful shutdown), clean up manually:
+```bash
+rm -r temp
+```
+
+### Static Images (Optional)
+
+For static assets that don't change:
+- **Location:** Place files in `src/main/resources/static/`
 - **Usage:** Reference with relative paths: `<img src="my-logo.png">`
-- **Fallback:** Used when no dynamic image is provided or validation fails
 - **Works:** Both locally and in packaged JARs
+- **Security:** Only local classpath resources are allowed
 
-### Dynamic Images (v4.0)
+### Example
 
-#### Supported Formats
-- ✅ PNG (`.png`)
-- ✅ JPEG (`.jpg`, `.jpeg`)
-- ✅ SVG (`.svg`)
-
-#### Processing Flow
-
-**1. Decoding & Validation**
-```
-Base64 Input → Decode → Detect MIME Type → Validate Format
-```
-
-The system handles multiple input formats:
-- Data URIs: `data:image/png;base64,iVBORw0KGgo...` (used as-is)
-- Base64-encoded strings: Decoded to extract raw Base64 data
-- Raw Base64: Used directly
-
-**2. MIME Type Detection**
-- **PNG:** Magic bytes `89 50 4E 47` (hex)
-- **JPEG:** Magic bytes `FF D8 FF` (hex)
-- **SVG:** XML markers (`<?xml`, `<svg`, or SVG namespace)
-
-**3. Image Replacement**
-- **Pre-Injection (Stage 3):** Header and footer HTML strings are processed
-- **Post-Assembly (Stage 6):** Final DOM is processed to catch all images
-- All `<img>` tags receive: `data:{mimeType};base64,{base64Data}`
-- Processing errors are logged and gracefully fall back to static images
-
-#### Fallback Behavior
-| Scenario | Result |
-|----------|--------|
-| `imageEncoded` is `null` or empty | Uses static images from `resources/static/` |
-| Unsupported image type | Processing skipped, uses static images |
-| Processing error | Original HTML preserved, uses static images |
-
-#### Example
 ```java
-// Encode image to Base64
-String imageBase64 = Base64.getEncoder()
-    .encodeToString(Files.readAllBytes(Paths.get("logo.png")));
+// Convert image to data URI
+byte[] imageBytes = Files.readAllBytes(Paths.get("logo.png"));
+String base64Image = Base64.getEncoder().encodeToString(imageBytes);
+String dataUri = "data:image/png;base64," + base64Image;
 
+// Create footer HTML with embedded image
+String footerHtml = """
+    <div id="pdf-footer">
+        <table style="width: 100%;">
+            <tr>
+                <td style="text-align: left;">
+                    <img src="%s" style="height: 40px;" />
+                </td>
+                <td style="text-align: right;">
+                    Page <span class="page-number"></span>
+                </td>
+            </tr>
+        </table>
+    </div>
+    """.formatted(dataUri);
+
+// Base64 encode the footer HTML
+String footerEncoded = Base64.getEncoder().encodeToString(footerHtml.getBytes(StandardCharsets.UTF_8));
+
+// Send in request
 GenerateRequestDto request = new GenerateRequestDto();
-request.setImageEncoded(imageBase64);
-// All <img> tags in template, header, and footer will use this image
+request.setFooterEncoded(footerEncoded);
+// Image will be automatically extracted and rendered in the PDF
 ```
 
 ## Recent Updates
+
+### v6.0: Simplified Architecture & Native Data URI Support
+- **Architecture Simplification:**
+  - Removed manual image injection logic from `MarkdownService`
+  - Removed `imageEncoded` field from `GenerateRequestDto`
+  - Eliminated ~250 lines of complex image processing code (methods: `processImagesInDocument`, `processHtmlWithImage`, `createDataUri`, `decodeImage`, `determineImageMimeType`, `isSupportedImageType`, `matchesSignature`, `extractBase64Data`)
+  - Removed image-related constants (MIME types, magic bytes, HTML markers)
+- **Native Data URI Support:**
+  - Images are now embedded directly in HTML using data URIs: `<img src="data:image/png;base64,...">`
+  - iText7 natively handles data URIs - no custom processing required
+  - Simpler client integration: construct HTML with embedded images before Base64 encoding
+- **Security Enhancement:**
+  - Implemented custom `SecureDataUriResourceRetriever` with SSRF protection
+  - **Allows:** Data URIs (Base64-encoded images) and local classpath resources
+  - **Blocks:** External HTTP/HTTPS requests to prevent Server-Side Request Forgery attacks
+  - Provides clear error messages when blocked resources are attempted
+- **Improved Pipeline:**
+  - Reduced from 7 stages to 5 stages (removed image pre-processing and post-processing stages)
+  - Cleaner, more maintainable codebase with fewer moving parts
+  - Better performance: no DOM traversal for image replacement
+- **Breaking Change:**
+  - Clients must now embed images as data URIs in HTML before sending to the API
+  - The `imageEncoded` field has been removed from the DTO
+  - Migration: Convert `imageEncoded` to data URI and embed in `headerEncoded`/`footerEncoded`
+- **Benefit:** Dramatically simplified architecture, better security, native iText7 data URI handling, and clearer client responsibility for image encoding.
+
+### v5.1: Code Cleanup & Validation Improvements
+- **Dependency Cleanup:**
+  - Removed unused Flying Saucer (xhtmlrenderer) dependency left over from v3.0 migration
+  - Removed unused FlexmarkConfig class that was not properly registered as a Spring bean
+  - Added spring-boot-starter-validation for Jakarta Bean Validation support
+- **DTO Improvements:**
+  - Removed unused fields (`filePath`, `templateName`) from GenerateRequestDto
+  - Added `@NotBlank` validation annotation to `templateEncoded` field
+  - Added comprehensive JavaDoc documentation to all DTO fields
+  - Controller now uses `@Valid` annotation for automatic validation
+- **Bug Fixes:**
+  - **Critical:** Fixed Markdown processing bug that was removing blank lines. Blank lines are now properly preserved as they're significant in Markdown for paragraph separation
+  - Fixed Base64 regex pattern to handle whitespace/newlines that commonly appear in real-world Base64 strings
+- **Code Cleanup:**
+  - Removed commented-out sanitization code and related unused imports
+  - Cleaned up unused method `sanitizeInputData()` for better code clarity
+- **Validation Error Handling:**
+  - Spring Boot now automatically returns 400 Bad Request with validation error details when `templateEncoded` is missing or blank
+  - Validation errors are returned before reaching the service layer, improving performance and error clarity
+- **Benefit:** Cleaner codebase, smaller dependency footprint, better validation with clear error messages, and critical bug fix for Markdown paragraph handling.
 
 ### v5.0: Code Quality & Performance Improvements
 - **Input Validation:** Enhanced validation with explicit null checks and required field validation. The service now validates that:
@@ -322,7 +441,7 @@ request.setImageEncoded(imageBase64);
   - Error logs with full exception context for troubleshooting
 - **Performance Optimizations:**
   - Optimized markdown processing using `Collectors.joining()` instead of reduce operations
-  - Improved string handling with empty line filtering
+  - Improved string handling with better blank line preservation
   - More efficient image processing with shared validation logic
 - **Code Quality:**
   - Eliminated code duplication between image processing methods
@@ -372,7 +491,11 @@ request.setImageEncoded(imageBase64);
 ### Security Considerations
 - **Input Sanitization:** Not performed on `docPropertiesJsonData` as it originates from trusted server-side sources
 - **Template/CSS/Header/Footer:** These are Base64-encoded and decoded, but not sanitized as they are considered trusted server-side resources
-- **Input Validation:** The service validates request structure and required fields to prevent processing invalid requests
+- **Input Validation:**
+  - The service uses Jakarta Bean Validation with `@Valid` and `@NotBlank` annotations
+  - Required field validation happens at the controller layer before reaching business logic
+  - Validates request structure and required fields to prevent processing invalid requests
+  - Automatic 400 Bad Request responses for validation failures
 - **Error Messages:** Error messages are designed to provide debugging information without exposing sensitive system details
 - **Design Rationale:** Skipping sanitization improves performance and preserves formatting flexibility while maintaining security through controlled data sources and proper validation
 
