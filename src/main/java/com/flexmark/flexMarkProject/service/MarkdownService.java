@@ -29,13 +29,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 /**
  * Service layer orchestrating the "Template-First" Document Generation Pipeline.
@@ -59,8 +55,9 @@ import java.util.stream.Collectors;
  * <p>
  * <strong>Image Handling:</strong>
  * Images are embedded directly in HTML using data URIs (e.g., {@code <img src="data:image/png;base64,...">}).
- * A custom {@link SecureDataUriResourceRetriever} provides SSRF protection by blocking external HTTP/HTTPS
- * requests while allowing data URIs and local classpath resources.
+ * The custom {@link SecureDataUriResourceRetriever} intercepts data URI requests during PDF rendering,
+ * parses the base64-encoded data, and provides the decoded binary stream to iText7. This approach
+ * eliminates temporary file overhead while maintaining SSRF protection by blocking external HTTP/HTTPS requests.
  * </p>
  */
 @Service
@@ -70,7 +67,6 @@ public class MarkdownService {
     // Static resource paths
     private static final String STATIC_RESOURCE_PATH = "static/";
     private static final String CLASSPATH_STATIC_PREFIX = "classpath:/static/";
-    private static final String TEMP_IMAGE_DIR = "temp/images/";
 
     private final Handlebars handlebars;
     private final Parser markdownParser;
@@ -110,32 +106,6 @@ public class MarkdownService {
 
         this.markdownParser = Parser.builder(options).build();
         this.htmlRenderer = HtmlRenderer.builder(options).build();
-
-        // Register shutdown hook to clean up temp files
-        Runtime.getRuntime().addShutdownHook(new Thread(this::cleanupTempFiles));
-    }
-
-    /**
-     * Cleans up temporary image files on application shutdown.
-     */
-    private void cleanupTempFiles() {
-        try {
-            Path tempDir = Paths.get(TEMP_IMAGE_DIR);
-            if (Files.exists(tempDir)) {
-                Files.walk(tempDir)
-                        .sorted(java.util.Comparator.reverseOrder())
-                        .forEach(path -> {
-                            try {
-                                Files.deleteIfExists(path);
-                            } catch (IOException e) {
-                                logger.warn("Failed to delete temp file: {}", path, e);
-                            }
-                        });
-                logger.info("Cleaned up temp directory: {}", tempDir.toAbsolutePath());
-            }
-        } catch (IOException e) {
-            logger.warn("Failed to clean up temp files", e);
-        }
     }
 
     /**
@@ -221,7 +191,7 @@ public class MarkdownService {
      * <p>
      * Configures secure resource retrieval that:
      * <ul>
-     * <li>Allows file:// URIs for temp images</li>
+     * <li>Allows data URIs for embedded images (decoded by SecureDataUriResourceRetriever)</li>
      * <li>Allows local static resources from classpath</li>
      * <li>Blocks external HTTP/HTTPS requests (SSRF protection)</li>
      * </ul>
@@ -236,24 +206,27 @@ public class MarkdownService {
         FontProvider fontProvider = new DefaultFontProvider(false, true, false);
         properties.setFontProvider(fontProvider);
 
-        // Set the Base URI to current working directory
-        // This allows iText7 to resolve relative paths like "temp/images/xyz.jpg"
-        Path currentDir = Paths.get("").toAbsolutePath();
-        String baseUri = currentDir.toUri().toString();
-        logger.debug("Using base URI: {}", baseUri);
-        properties.setBaseUri(baseUri);
+        // Set the Base URI to empty string
+        // Data URIs are self-contained and don't need a base URI
+        // An empty base URI allows iText7 to process data URIs without path resolution issues
+        properties.setBaseUri("");
+        logger.debug("Using base URI: (empty string)");
 
         // Configure secure resource retrieval with SSRF protection
-        properties.setResourceRetriever(new SecureFileResourceRetriever());
+        properties.setResourceRetriever(new SecureDataUriResourceRetriever());
 
         return properties;
     }
 
     /**
-     * Secure Resource Retriever that allows file:// URIs for local temp images,
+     * Secure Resource Retriever that allows data URIs and local classpath resources,
      * but blocks external HTTP/HTTPS requests to prevent SSRF attacks.
+     * <p>
+     * Data URIs are parsed to extract the base64-encoded binary data, which is then
+     * returned as an InputStream for iText7 to process.
+     * </p>
      */
-    private static class SecureFileResourceRetriever implements IResourceRetriever {
+    private static class SecureDataUriResourceRetriever implements IResourceRetriever {
 
         @Override
         public InputStream getInputStreamByUrl(java.net.URL url) throws java.io.IOException {
@@ -263,7 +236,12 @@ public class MarkdownService {
 
             String urlString = url.toString();
 
-            // Allow file:// URLs (local temp images and static resources)
+            // Allow data URIs (embedded images) - parse and decode the base64 data
+            if (urlString.startsWith("data:")) {
+                return parseDataUri(urlString);
+            }
+
+            // Allow file:// URLs (local static resources)
             if (urlString.startsWith("file://") || urlString.startsWith("jar:file:")) {
                 return url.openStream();
             }
@@ -282,6 +260,46 @@ public class MarkdownService {
             try (InputStream is = getInputStreamByUrl(url)) {
                 return is.readAllBytes();
             }
+        }
+
+        /**
+         * Parses a data URI and returns an InputStream of the decoded binary data.
+         * <p>
+         * Format: data:[<mediatype>][;base64],<data>
+         * Example: data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...
+         * </p>
+         *
+         * @param dataUri The data URI string
+         * @return InputStream containing the decoded binary data
+         * @throws IOException If the data URI is malformed or decoding fails
+         */
+        private InputStream parseDataUri(String dataUri) throws IOException {
+            // Find the comma that separates metadata from data
+            int commaIndex = dataUri.indexOf(',');
+            if (commaIndex < 0 || commaIndex >= dataUri.length() - 1) {
+                throw new IOException("Malformed data URI: missing comma separator");
+            }
+
+            // Extract metadata and data parts
+            String metadata = dataUri.substring(5, commaIndex); // Skip "data:"
+            String data = dataUri.substring(commaIndex + 1);
+
+            // Decode based on encoding type
+            byte[] decodedData;
+            if (metadata.contains("base64")) {
+                // Base64 encoded data (most common for images)
+                try {
+                    decodedData = Base64.getDecoder().decode(data);
+                } catch (IllegalArgumentException e) {
+                    throw new IOException("Failed to decode base64 data in data URI", e);
+                }
+            } else {
+                // URL-encoded data (less common, mainly for text)
+                String decoded = java.net.URLDecoder.decode(data, StandardCharsets.UTF_8);
+                decodedData = decoded.getBytes(StandardCharsets.UTF_8);
+            }
+
+            return new ByteArrayInputStream(decodedData);
         }
     }
 
@@ -303,125 +321,6 @@ public class MarkdownService {
         }
     }
 
-    /**
-     * Extracts images from data URIs in HTML content and saves them to temp files.
-     * Rewrites img src attributes to reference the saved files instead of data URIs.
-     *
-     * @param htmlContent The HTML content containing img tags with data URIs
-     * @return The modified HTML with file-based image references
-     * @throws IOException If file operations fail
-     */
-    private String extractAndSaveImages(String htmlContent) throws IOException {
-        if (!StringUtils.hasText(htmlContent)) {
-            return htmlContent;
-        }
-
-        // Parse the HTML
-        Document doc = Jsoup.parse(htmlContent);
-        Elements imgTags = doc.select("img[src^=data:]");
-
-        if (imgTags.isEmpty()) {
-            logger.debug("No data URI images found in content");
-            return htmlContent;
-        }
-
-        logger.debug("Found {} data URI image(s) to extract", imgTags.size());
-
-        // Create temp directory if it doesn't exist
-        Path tempDir = Paths.get(TEMP_IMAGE_DIR);
-        if (!Files.exists(tempDir)) {
-            Files.createDirectories(tempDir);
-            logger.debug("Created temp directory: {}", tempDir.toAbsolutePath());
-        }
-
-        // Process each image
-        for (Element img : imgTags) {
-            String dataUri = img.attr("src");
-
-            try {
-                // Extract the image data
-                ImageData imageData = parseDataUri(dataUri);
-
-                // Generate unique filename
-                String filename = UUID.randomUUID() + "." + imageData.extension;
-                Path imagePath = tempDir.resolve(filename);
-
-                // Save the image to file
-                Files.write(imagePath, imageData.data);
-                logger.debug("Saved image to: {}", imagePath.toAbsolutePath());
-
-                // Update the img src to reference the file
-                // Use relative path from temp directory
-                String relativePath = TEMP_IMAGE_DIR + filename;
-                img.attr("src", relativePath);
-                logger.debug("Rewrote img src to: {}", relativePath);
-
-            } catch (Exception e) {
-                logger.error("Failed to extract image from data URI", e);
-                // Leave the original data URI if extraction fails
-            }
-        }
-
-        // Return the full HTML content (not just body's inner HTML)
-        // This preserves the complete structure including wrapper divs
-        return doc.body().html();
-    }
-
-    /**
-     * Parses a data URI and extracts the binary data and file extension.
-     *
-     * @param dataUri The data URI (e.g., "data:image/png;base64,...")
-     * @return ImageData containing the decoded bytes and file extension
-     * @throws IOException If the data URI is malformed
-     */
-    private ImageData parseDataUri(String dataUri) throws IOException {
-        // Data URI format: data:[<mediatype>][;base64],<data>
-        int commaIndex = dataUri.indexOf(',');
-        if (commaIndex < 0 || commaIndex >= dataUri.length() - 1) {
-            throw new IOException("Malformed data URI: missing comma separator");
-        }
-
-        String metadata = dataUri.substring(5, commaIndex); // Skip "data:"
-        String data = dataUri.substring(commaIndex + 1);
-
-        // Extract media type and determine extension
-        String extension = "bin"; // default
-        if (metadata.contains("image/png")) {
-            extension = "png";
-        } else if (metadata.contains("image/jpeg") || metadata.contains("image/jpg")) {
-            extension = "jpg";
-        } else if (metadata.contains("image/gif")) {
-            extension = "gif";
-        } else if (metadata.contains("image/webp")) {
-            extension = "webp";
-        } else if (metadata.contains("image/svg+xml")) {
-            extension = "svg";
-        }
-
-        // Decode the data
-        byte[] decodedData;
-        if (metadata.contains("base64")) {
-            decodedData = Base64.getDecoder().decode(data);
-        } else {
-            // URL-encoded data (less common)
-            decodedData = java.net.URLDecoder.decode(data, StandardCharsets.UTF_8).getBytes(StandardCharsets.UTF_8);
-        }
-
-        return new ImageData(decodedData, extension);
-    }
-
-    /**
-     * Helper class to hold extracted image data and extension.
-     */
-    private static class ImageData {
-        final byte[] data;
-        final String extension;
-
-        ImageData(byte[] data, String extension) {
-            this.data = data;
-            this.extension = extension;
-        }
-    }
 
     /**
      * Parses the hybrid content, finds <md> tags, converts them to HTML, and modifies the DOM in-place.
@@ -462,11 +361,12 @@ public class MarkdownService {
      * Configures the final DOM with CSS, header, and footer, enforcing strict XHTML compliance.
      * <p>
      * iText7 requires valid XML (XHTML). This method ensures all tags are properly closed
-     * and entities are correctly escaped. Images with data URIs are handled natively by iText7.
+     * and entities are correctly escaped. Images with data URIs are handled by the custom
+     * SecureDataUriResourceRetriever which parses and decodes them during PDF rendering.
      * </p>
      * <p>
-     * Headers and footers are parsed through Jsoup to ensure img tags with data URIs are
-     * properly handled and not corrupted during DOM manipulation.
+     * Headers and footers are parsed through Jsoup to ensure proper XHTML formatting
+     * and to preserve data URI attributes without corruption.
      * </p>
      *
      * @param doc The document to configure
@@ -487,55 +387,37 @@ public class MarkdownService {
         }
 
         // Inject Footer (prepended first so header appears on top)
-        // Extract data URI images and save to temp files
         if (StringUtils.hasText(footerStr)) {
             logger.debug("Processing footer - HTML length: {}", footerStr.length());
             logger.debug("Footer contains data URI: {}", footerStr.contains("data:image"));
 
-            try {
-                // Extract images from data URIs and save to temp files
-                String processedFooter = extractAndSaveImages(footerStr);
+            // Parse footer as a separate document to ensure proper XHTML handling
+            Document footerDoc = Jsoup.parse(footerStr);
+            footerDoc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+            footerDoc.outputSettings().escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml);
 
-                // Parse footer as a separate document to ensure proper handling
-                Document footerDoc = Jsoup.parse(processedFooter);
-                footerDoc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
-                footerDoc.outputSettings().escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml);
+            // Extract the body content from the parsed footer
+            String parsedFooter = footerDoc.body().html();
+            doc.body().prepend(parsedFooter);
 
-                // Extract the body content from the parsed footer
-                String parsedFooter = footerDoc.body().html();
-                doc.body().prepend(parsedFooter);
-
-                logger.debug("Footer processed successfully");
-            } catch (IOException e) {
-                logger.error("Failed to process footer images, using original footer", e);
-                doc.body().prepend(footerStr);
-            }
+            logger.debug("Footer injected successfully");
         }
 
         // Inject Header (prepended after footer to appear at the very top)
-        // Extract data URI images and save to temp files
         if (StringUtils.hasText(headerStr)) {
             logger.debug("Processing header - HTML length: {}", headerStr.length());
             logger.debug("Header contains data URI: {}", headerStr.contains("data:image"));
 
-            try {
-                // Extract images from data URIs and save to temp files
-                String processedHeader = extractAndSaveImages(headerStr);
+            // Parse header as a separate document to ensure proper XHTML handling
+            Document headerDoc = Jsoup.parse(headerStr);
+            headerDoc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+            headerDoc.outputSettings().escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml);
 
-                // Parse header as a separate document to ensure proper handling
-                Document headerDoc = Jsoup.parse(processedHeader);
-                headerDoc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
-                headerDoc.outputSettings().escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml);
+            // Extract the body content from the parsed header
+            String parsedHeader = headerDoc.body().html();
+            doc.body().prepend(parsedHeader);
 
-                // Extract the body content from the parsed header
-                String parsedHeader = headerDoc.body().html();
-                doc.body().prepend(parsedHeader);
-
-                logger.debug("Header processed successfully");
-            } catch (IOException e) {
-                logger.error("Failed to process header images, using original header", e);
-                doc.body().prepend(headerStr);
-            }
+            logger.debug("Header injected successfully");
         }
     }
 

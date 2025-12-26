@@ -78,66 +78,55 @@ request.setDocPropertiesJsonData(Map.of("title", "Hello World"));
 ```mermaid
 flowchart TD
     Start([API Request<br/>POST /api/content/submit]) --> Validate[Stage 1: Input Validation]
-    
+
     Validate --> ValidateRequest{Request<br/>valid?}
     ValidateRequest -->|Invalid| Error1[Return 400<br/>IllegalArgumentException]
     ValidateRequest -->|Valid| ValidateTemplate{templateEncoded<br/>provided?}
     ValidateTemplate -->|Missing| Error2[Return 400<br/>Template Required]
     ValidateTemplate -->|Valid| Decode[Stage 2: Input Decoding]
-    
+
     Decode --> DecodeTemplate[Decode templateEncoded<br/>Base64 → HTML]
     Decode --> DecodeCSS[Decode cssEncoded<br/>Base64 → CSS]
-    Decode --> DecodeHeader[Decode headerEncoded<br/>Base64 → HTML]
-    Decode --> DecodeFooter[Decode footerEncoded<br/>Base64 → HTML]
-    Decode --> DecodeImage[Decode imageEncoded<br/>Base64 → Image Data]
+    Decode --> DecodeHeader[Decode headerEncoded<br/>Base64 → HTML with data URIs]
+    Decode --> DecodeFooter[Decode footerEncoded<br/>Base64 → HTML with data URIs]
     Decode --> GetData[Extract docPropertiesJsonData<br/>Trusted Server-Side Data]
-    
-    DecodeTemplate --> ImageCheck{imageEncoded<br/>provided?}
-    DecodeCSS --> ImageCheck
-    DecodeHeader --> ImageCheck
-    DecodeFooter --> ImageCheck
-    DecodeImage --> ImageCheck
-    GetData --> ImageCheck
-    
-    ImageCheck -->|Yes| ImagePreProcess[Stage 3: Image Pre-Processing]
-    ImageCheck -->|No| Handlebars[Stage 4: Templating Handlebars]
-    
-    ImagePreProcess --> ValidateImage[Validate Image Type<br/>PNG/JPG/SVG only]
-    ValidateImage -->|Valid| ProcessHeader[Process Header HTML<br/>Replace img src with data URI]
-    ValidateImage -->|Invalid| FallbackStatic[Use Static Images<br/>from resources/static/]
-    ProcessHeader --> ProcessFooter[Process Footer HTML<br/>Replace img src with data URI]
-    ProcessFooter --> Handlebars
-    FallbackStatic --> Handlebars
-    
+
+    DecodeTemplate --> Handlebars[Stage 3: Handlebars Templating]
+    DecodeCSS --> Handlebars
+    DecodeHeader --> Handlebars
+    DecodeFooter --> Handlebars
+    GetData --> Handlebars
+
     Handlebars --> MergeData[Merge docPropertiesJsonData<br/>into Handlebars Template]
-    MergeData --> ExpandLoops["Expand Loops & Conditionals<br/>Handlebars #each, #if, etc."]
+    MergeData --> ExpandLoops[Expand Loops & Conditionals<br/>Handlebars #each, #if, etc.]
     ExpandLoops --> HybridOutput[Output: Hybrid HTML/Markdown<br/>Template structure + Raw Markdown]
-    
-    HybridOutput --> DOMParse[Stage 5: DOM Processing<br/>Parse with Jsoup]
+
+    HybridOutput --> DOMParse[Stage 4: DOM Processing<br/>Parse with Jsoup]
     DOMParse --> FindMDTags[Locate &lt;md&gt; tags<br/>in Document]
     FindMDTags --> RenderMarkdown[Render Markdown to HTML<br/>via Flexmark Parser]
     RenderMarkdown --> ReplaceInPlace[Replace &lt;md&gt; nodes<br/>with rendered HTML in-place]
     ReplaceInPlace --> PureHTML[Output: Pure HTML DOM<br/>All Markdown converted]
-    
-    PureHTML --> Assembly[Stage 6: Assembly & Image Processing]
+
+    PureHTML --> Assembly[Stage 5: DOM Assembly]
     Assembly --> InjectCSS[Inject CSS into &lt;head&gt;<br/>from cssStr]
     InjectCSS --> InjectFooter[Inject Footer into &lt;body&gt;<br/>prepend footerStr]
     InjectFooter --> InjectHeader[Inject Header into &lt;body&gt;<br/>prepend headerStr]
-    
-    InjectHeader --> ImageCheck2{imageEncoded<br/>provided?}
-    ImageCheck2 -->|Yes| ProcessAllImages[Process All &lt;img&gt; Tags<br/>Replace src with data URIs]
-    ImageCheck2 -->|No| EnforceXHTML[Enforce XHTML Compliance<br/>Auto-close tags, escape entities]
-    ProcessAllImages --> EnforceXHTML
-    
-    EnforceXHTML --> ValidXHTML[Output: Valid XHTML DOM<br/>Ready for PDF Rendering]
-    
-    ValidXHTML --> PDFRender[Stage 7: Rendering iText7]
-    PDFRender --> ConfigureProps[Configure ConverterProperties<br/>Set Base URI for static assets]
+    InjectHeader --> EnforceXHTML[Enforce XHTML Compliance<br/>Auto-close tags, escape entities]
+    EnforceXHTML --> ValidXHTML[Output: Valid XHTML DOM<br/>Data URIs preserved]
+
+    ValidXHTML --> PDFRender[Stage 6: PDF Rendering - iText7]
+    PDFRender --> ConfigureProps[Configure ConverterProperties<br/>Empty base URI, Secure Retriever]
     ConfigureProps --> ConvertToPDF[HtmlConverter.convertToPdf<br/>XHTML → PDF Binary]
-    ConvertToPDF --> PDFOutput[Output: PDF Binary Stream<br/>Content-Type: application/pdf]
-    
+
+    ConvertToPDF --> DataURICheck{Image src has<br/>data URI?}
+    DataURICheck -->|Yes| ParseDataURI[SecureDataUriResourceRetriever<br/>Parse and decode Base64]
+    DataURICheck -->|No| RegularResource[Load from file:// or jar:file://]
+    ParseDataURI --> RenderImage[iText7 renders image<br/>from binary stream]
+    RegularResource --> RenderImage
+
+    RenderImage --> PDFOutput[Output: PDF Binary Stream<br/>Content-Type: application/pdf]
     PDFOutput --> End([Response<br/>PDF Document])
-    
+
     style Start fill:#2196F3,color:#fff
     style End fill:#4CAF50,color:#fff
     style Validate fill:#F44336,color:#fff
@@ -145,31 +134,30 @@ flowchart TD
     style ValidateTemplate fill:#E91E63,color:#fff
     style Error1 fill:#FF5722,color:#fff
     style Error2 fill:#FF5722,color:#fff
-    style ImageCheck fill:#FFC107,color:#000
-    style ImageCheck2 fill:#FFC107,color:#000
-    style ValidateImage fill:#FF9800,color:#fff
-    style FallbackStatic fill:#FF9800,color:#fff
+    style DataURICheck fill:#FFC107,color:#000
     style Decode fill:#607D8B,color:#fff
-    style ImagePreProcess fill:#009688,color:#fff
     style Handlebars fill:#9C27B0,color:#fff
     style DOMParse fill:#00BCD4,color:#fff
     style Assembly fill:#3F51B5,color:#fff
     style PDFRender fill:#E91E63,color:#fff
+    style ParseDataURI fill:#009688,color:#fff
+    style RenderImage fill:#4CAF50,color:#fff
 ```
 
 > **Note:** For a static image version, see [flexmark_flowchart.png](./flowchart/flexmark_flowchart.png)
 
 ### Pipeline Stages
 
-The service follows a strict **5-stage pipeline** to ensure formatting compliance and robust error handling:
+The service follows a strict **6-stage pipeline** to ensure formatting compliance and robust error handling:
 
 | Stage | Process | Output |
 |-------|---------|--------|
 | **1. Input Validation** | Validate request object is not null; ensure `templateEncoded` is provided and not empty (Jakarta Bean Validation) | Validated request or error response |
 | **2. Input Decoding** | Decode Base64-encoded inputs (template, CSS, header, footer); handle decoding errors gracefully | Raw HTML/CSS strings (with embedded data URI images) |
 | **3. Templating (Handlebars)** | Merge data into HTML structure; loops expand while content remains raw Markdown | Hybrid HTML/Markdown string |
-| **4. DOM Processing** | Parse hybrid string → locate `<md>` tags → render Markdown → replace in-place; inject CSS/headers/footers | Valid XHTML DOM |
-| **5. Rendering (iText7)** | Convert XHTML to PDF binary with secure resource retrieval (data URIs allowed, HTTP/HTTPS blocked) | PDF stream |
+| **4. DOM Processing** | Parse hybrid string → locate `<md>` tags → render Markdown → replace in-place | Pure HTML DOM (no more Markdown) |
+| **5. DOM Assembly** | Inject CSS/headers/footers into DOM; enforce XHTML compliance (auto-close tags, escape entities) | Valid XHTML DOM |
+| **6. Rendering (iText7)** | Convert XHTML to PDF binary with secure resource retrieval (data URIs decoded on-the-fly, HTTP/HTTPS blocked) | PDF stream |
 
 > **Note:** Input sanitization is not performed as `docPropertiesJsonData` originates from server-side sources and is considered trusted. This design decision improves performance and preserves formatting flexibility.
 
@@ -184,29 +172,37 @@ The service follows a strict **5-stage pipeline** to ensure formatting complianc
 **Stage 2 - Input Decoding:**
 - Decodes all Base64-encoded inputs (template, CSS, header, footer)
 - Images are already embedded as data URIs in the HTML (e.g., `<img src="data:image/png;base64,...">``)
+- Data URIs remain intact during decoding - no extraction or file writing
 - No separate image processing required
 
-**Stage 3 - Templating:**
+**Stage 3 - Templating (Handlebars):**
 - Data from `docPropertiesJsonData` is merged into the Handlebars template
 - Loops and conditionals expand while embedded Markdown content remains raw
 - Result is a hybrid HTML/Markdown string
 - Template compilation errors are caught and logged with context
 
-**Stage 4 - DOM Processing & Assembly:**
+**Stage 4 - DOM Processing:**
 - Parse the hybrid string into a Jsoup `Document`
 - Locate custom `<md>` tags and render enclosed Markdown to HTML via Flexmark
 - Preserves blank lines for proper paragraph separation
 - Replace each `<md>` node in place with the rendered HTML nodes
-- Inject CSS, headers, and footers directly into the DOM
-- Enforce XHTML syntax automatically for iText7 compatibility
+- Result is pure HTML DOM (all Markdown converted)
 
-**Stage 5 - Rendering:**
+**Stage 5 - DOM Assembly:**
+- Inject CSS into `<head>`
+- Inject footer at top of `<body>` (prepended first)
+- Inject header at top of `<body>` (prepended second, appears above footer)
+- Enforce XHTML syntax automatically for iText7 compatibility (self-closing tags, escaped entities, quoted attributes)
+- Data URIs in headers/footers are preserved without corruption
+
+**Stage 6 - Rendering (iText7):**
 - Convert XHTML to PDF using iText7's HtmlConverter
 - **Secure Resource Retrieval:** Custom `SecureDataUriResourceRetriever` implementation
-  - ✅ Allows: Data URIs (Base64-encoded images) and local classpath resources
+  - ✅ Allows: Data URIs (decoded on-the-fly during rendering) and local file:// resources
   - ❌ Blocks: External HTTP/HTTPS requests (SSRF protection)
-- Data URIs are decoded and rendered natively by iText7
-- Static resources loaded from `resources/static/` directory
+- When iText7 encounters a data URI, the retriever parses and decodes the Base64 data in real-time
+- No temporary files created - binary image data streamed directly to PDF renderer
+- Static resources (if needed) loaded from classpath
 
 ## API Reference
 
@@ -259,7 +255,7 @@ Wrap dynamic Markdown content in `<md>` tags:
 ## Image Handling
 
 ### Overview
-Images are embedded in HTML using **data URIs** (Base64-encoded). Due to iText7 limitations with data URIs in headers/footers, the service **automatically extracts** data URI images and converts them to temporary files for reliable PDF rendering.
+Images are embedded in HTML using **data URIs** (Base64-encoded). The service uses a custom `SecureDataUriResourceRetriever` that intercepts data URI requests during PDF rendering and provides the decoded binary data directly to iText7, eliminating the need for temporary files.
 
 ### Data URI Format
 Images should be embedded in `<img>` tags using the data URI format:
@@ -267,30 +263,31 @@ Images should be embedded in `<img>` tags using the data URI format:
 <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA..." />
 ```
 
-### Automatic Image Extraction
+### How Data URIs are Processed
 
-**How It Works:**
-1. **Detection:** The service scans header/footer HTML for `<img>` tags with data URI `src` attributes
-2. **Extraction:** Base64 data is decoded and saved to `temp/images/` directory with UUID-based filenames
-3. **Rewriting:** The `img src` attribute is rewritten to reference the file path (e.g., `temp/images/abc-123.jpg`)
-4. **Rendering:** iText7 loads images from the file system for reliable PDF generation
-5. **Cleanup:** Temporary files are automatically deleted on application shutdown via shutdown hook
+**Runtime Processing Flow:**
+1. **HTML Assembly:** Headers, footers, and templates are parsed through Jsoup to ensure XHTML compliance
+2. **Data URI Preservation:** Data URIs remain intact in the HTML - no extraction or file writing occurs
+3. **PDF Rendering:** When iText7 encounters an `<img>` tag with a data URI:
+   - `SecureDataUriResourceRetriever.getInputStreamByUrl()` is called
+   - The data URI is parsed to extract the base64 data
+   - Base64 data is decoded to binary bytes
+   - Binary stream is returned to iText7 for image rendering
+4. **Direct Rendering:** iText7 renders the image directly from the decoded bytes
 
-**Example Transformation:**
-```html
-<!-- Input (in headerEncoded/footerEncoded): -->
-<img src="data:image/jpeg;base64,/9j/4AAQSkZJRg..." />
-
-<!-- After extraction: -->
-<img src="temp/images/82cdd817-299d-4e6c-a1dd-f9d52b22b38f.jpg" />
-```
+**Key Benefits:**
+- ✅ **No temporary files** - Zero file system overhead
+- ✅ **Better performance** - No I/O operations during PDF generation
+- ✅ **Simpler architecture** - No cleanup or file management needed
+- ✅ **Stateless** - Each request is completely independent
 
 ### Supported Formats
-- ✅ PNG: `data:image/png;base64,...` → `.png`
-- ✅ JPEG: `data:image/jpeg;base64,...` → `.jpg`
-- ✅ GIF: `data:image/gif;base64,...` → `.gif`
-- ✅ WebP: `data:image/webp;base64,...` → `.webp`
-- ✅ SVG: `data:image/svg+xml;base64,...` → `.svg`
+All standard image formats supported by iText7:
+- ✅ PNG: `data:image/png;base64,...`
+- ✅ JPEG: `data:image/jpeg;base64,...`
+- ✅ GIF: `data:image/gif;base64,...`
+- ✅ WebP: `data:image/webp;base64,...`
+- ✅ SVG: `data:image/svg+xml;base64,...`
 
 ### Usage in Templates
 
@@ -303,7 +300,7 @@ Images should be embedded in `<img>` tags using the data URI format:
 </div>
 ```
 
-Then Base64-encode the entire HTML and send in `headerEncoded` field. Images will be automatically extracted during processing.
+Then Base64-encode the entire HTML and send in `headerEncoded` field.
 
 **Template with Images:**
 ```handlebars
@@ -314,38 +311,44 @@ Then Base64-encode the entire HTML and send in `headerEncoded` field. Images wil
 
 ### Security: SSRF Protection
 
-The service implements a **custom secure resource retriever** that:
-- ✅ **Allows:** Local file URIs (for extracted images in `temp/images/`)
-- ✅ **Allows:** Local classpath resources (`file://`, `jar:file:`)
-- ❌ **Blocks:** External HTTP/HTTPS requests (prevents SSRF attacks)
+The `SecureDataUriResourceRetriever` implements strict security controls:
 
-Any attempt to load external resources via `http://` or `https://` will be blocked with an error.
+**Allowed:**
+- ✅ **Data URIs:** `data:image/png;base64,...` - Parsed and decoded on-the-fly
+- ✅ **Local file URIs:** `file://` - For local resources only
+- ✅ **Classpath resources:** `jar:file:` - For packaged resources
 
-### Temporary File Management
+**Blocked:**
+- ❌ **HTTP requests:** `http://example.com/image.jpg` - Prevents SSRF attacks
+- ❌ **HTTPS requests:** `https://example.com/image.jpg` - Prevents data exfiltration
+- ❌ **External resources:** Any attempt to fetch external content is rejected
 
-**Directory:** `temp/images/` (relative to application working directory)
+**Security Implementation:**
+```java
+@Override
+public InputStream getInputStreamByUrl(URL url) throws IOException {
+    String urlString = url.toString();
 
-**Lifecycle:**
-- Created automatically when first image is extracted
-- Files persist during application runtime
-- Automatically cleaned up on graceful shutdown via registered shutdown hook
-- Add `temp/` to `.gitignore` to avoid committing temporary files
+    // Allow data URIs - parse and decode inline
+    if (urlString.startsWith("data:")) {
+        return parseDataUri(urlString);
+    }
 
-**Manual Cleanup:**
-If the application is forcefully terminated (Ctrl+C without graceful shutdown), clean up manually:
-```bash
-rm -r temp
+    // Allow local file access only
+    if (urlString.startsWith("file://") || urlString.startsWith("jar:file:")) {
+        return url.openStream();
+    }
+
+    // Block ALL external HTTP/HTTPS requests
+    if (urlString.startsWith("http://") || urlString.startsWith("https://")) {
+        throw new IOException("External HTTP/HTTPS requests are blocked for security reasons");
+    }
+
+    return url.openStream();
+}
 ```
 
-### Static Images (Optional)
-
-For static assets that don't change:
-- **Location:** Place files in `src/main/resources/static/`
-- **Usage:** Reference with relative paths: `<img src="my-logo.png">`
-- **Works:** Both locally and in packaged JARs
-- **Security:** Only local classpath resources are allowed
-
-### Example
+### Example Usage
 
 ```java
 // Convert image to data URI
@@ -375,8 +378,780 @@ String footerEncoded = Base64.getEncoder().encodeToString(footerHtml.getBytes(St
 // Send in request
 GenerateRequestDto request = new GenerateRequestDto();
 request.setFooterEncoded(footerEncoded);
-// Image will be automatically extracted and rendered in the PDF
+// Data URI will be decoded and rendered directly during PDF generation
 ```
+
+### Data URI Parsing Details
+
+The `SecureDataUriResourceRetriever` parses data URIs according to RFC 2397:
+
+**Data URI Format:**
+```
+data:[<mediatype>][;base64],<data>
+```
+
+**Parsing Logic:**
+1. Extract metadata and data parts (split on comma)
+2. Check if `base64` encoding is specified in metadata
+3. Decode base64 string to binary bytes
+4. Return as `ByteArrayInputStream` to iText7
+
+**Example Data URI Breakdown:**
+```
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...
+│    │         │       │
+│    │         │       └─ Base64-encoded image data
+│    │         └───────── Encoding method
+│    └─────────────────── MIME type
+└──────────────────────── Protocol
+```
+
+## Code Walkthrough
+
+This section provides a detailed walkthrough of the codebase for learning and reference. We'll follow the data flow from HTTP request to PDF response, examining each component step-by-step.
+
+### Architecture Overview
+
+The application follows a **clean layered architecture**:
+
+```
+HTTP Request
+    ↓
+[Controller Layer] - Handles HTTP, validates input
+    ↓
+[Service Layer] - Core business logic, document generation pipeline
+    ↓
+[Libraries] - Handlebars, Flexmark, Jsoup, iText7
+    ↓
+PDF Response
+```
+
+**Key Design Decisions:**
+- **Template-First Approach:** Process Handlebars before Markdown to enable loops/conditionals in Markdown content
+- **Data URI Images:** Eliminate temporary files by decoding Base64 images on-the-fly during PDF rendering
+- **XHTML Compliance:** Use Jsoup to enforce strict XHTML for iText7 compatibility
+- **Stateless Processing:** No state management, each request is independent
+
+### Component Breakdown
+
+#### 1. Data Transfer Object (DTO)
+
+**File:** [GenerateRequestDto.java](src/main/java/com/flexmark/flexMarkProject/dto/GenerateRequestDto.java)
+
+**Purpose:** Define the API contract for document generation requests.
+
+```java
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class GenerateRequestDto implements Serializable {
+    @NotBlank(message = "Template is required and cannot be empty")
+    private String templateEncoded;
+
+    private String cssEncoded;
+    private String headerEncoded;
+    private String footerEncoded;
+    private Map<String, Object> docPropertiesJsonData;
+}
+```
+
+**Key Points:**
+- **Lombok Annotations:** `@Data` generates getters/setters, `@AllArgsConstructor`/`@NoArgsConstructor` for constructors
+- **Validation:** `@NotBlank` ensures `templateEncoded` is required (validated at controller layer)
+- **JSON Serialization:** `@JsonInclude(JsonInclude.Include.NON_NULL)` excludes null fields from JSON responses
+- **Design:** All HTML/CSS inputs are Base64-encoded to safely transmit special characters and preserve formatting
+
+#### 2. Controller Layer
+
+**File:** [InitialController.java](src/main/java/com/flexmark/flexMarkProject/controller/InitialController.java)
+
+**Purpose:** HTTP transport layer - receives requests, validates input, returns PDF response.
+
+```java
+@RestController
+@RequestMapping("/api/content")
+public class InitialController {
+    private final MarkdownService markdownService;
+
+    public InitialController(MarkdownService markdownService) {
+        this.markdownService = markdownService;
+    }
+
+    @PostMapping("/submit")
+    public ResponseEntity<Resource> submitContent(@Valid @RequestBody GenerateRequestDto data) {
+        Resource generatedPdf = markdownService.generateDocument(data);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=generated_report.pdf")
+                .body(generatedPdf);
+    }
+}
+```
+
+**Key Points:**
+- **Constructor Injection:** Spring injects `MarkdownService` dependency (preferred over field injection)
+- **Validation:** `@Valid` annotation triggers Jakarta Bean Validation on `GenerateRequestDto`
+  - If `templateEncoded` is missing/blank, Spring returns 400 Bad Request automatically
+  - Validation happens **before** reaching service layer - fail fast principle
+- **Response Headers:**
+  - `Content-Type: application/pdf` - Tells browser this is a PDF file
+  - `Content-Disposition: inline` - Display in browser (change to `attachment` for download)
+  - `filename=generated_report.pdf` - Default filename if user saves the PDF
+
+**Flow:**
+1. Spring Boot receives POST request to `/api/content/submit`
+2. Jackson deserializes JSON body to `GenerateRequestDto`
+3. Validation runs automatically (fails with 400 if invalid)
+4. Controller calls `markdownService.generateDocument(data)`
+5. Service returns PDF as `Resource` (stream wrapper)
+6. Controller wraps in `ResponseEntity` with proper headers
+7. Spring streams PDF binary to client
+
+#### 3. Service Layer - The Pipeline Orchestrator
+
+**File:** [MarkdownService.java](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java)
+
+**Purpose:** Core business logic - orchestrates the 5-stage document generation pipeline.
+
+##### 3.1 Service Initialization
+
+```java
+@Service
+public class MarkdownService {
+    private static final Logger logger = LoggerFactory.getLogger(MarkdownService.class);
+
+    private final Handlebars handlebars;
+    private final Parser markdownParser;
+    private final HtmlRenderer htmlRenderer;
+
+    public MarkdownService() {
+        this.handlebars = new Handlebars();
+
+        // FlexMark Configuration
+        MutableDataSet options = new MutableDataSet();
+        options.set(Parser.EXTENSIONS, List.of(
+                TablesExtension.create(),
+                AttributesExtension.create()
+        ));
+
+        // CRITICAL: Allow HTML tags to pass through
+        options.set(HtmlRenderer.SUPPRESS_HTML, false);
+
+        // Enable deep parsing (parse markdown inside HTML tags)
+        options.set(Parser.HTML_BLOCK_DEEP_PARSER, true);
+        options.set(Parser.HTML_BLOCK_DEEP_PARSE_BLANK_LINE_INTERRUPTS, false);
+
+        // Disable indented code blocks (use ``` instead)
+        options.set(Parser.INDENTED_CODE_BLOCK_PARSER, false);
+
+        this.markdownParser = Parser.builder(options).build();
+        this.htmlRenderer = HtmlRenderer.builder(options).build();
+    }
+}
+```
+
+**Key Configuration Decisions:**
+
+**1. `SUPPRESS_HTML = false`** (CRITICAL)
+- **Why:** We run Flexmark **after** Handlebars, so the input contains valid HTML tags from the template
+- **Effect:** HTML tags like `<div class="card">` pass through instead of being escaped to `&lt;div&gt;`
+- **Example:** Template has `<div>{{name}}</div>` → After Handlebars: `<div>John</div>` → Markdown must preserve the `<div>` tags
+
+**2. `HTML_BLOCK_DEEP_PARSER = true`**
+- **Why:** Enables parsing Markdown inside HTML tags (critical for our template-first approach)
+- **Example:**
+  ```html
+  <div class="section">
+    <md>
+    ## Title
+    - Item 1
+    </md>
+  </div>
+  ```
+  Without this, the Markdown inside `<md>` tags wouldn't be processed.
+
+**3. `INDENTED_CODE_BLOCK_PARSER = false`**
+- **Why:** Template indentation could accidentally trigger code blocks (4 spaces = code block in Markdown)
+- **Solution:** Disable indented code blocks, require triple backticks ``` for code blocks
+- **Trade-off:** Users must use fenced code blocks instead of indented ones
+
+##### 3.2 Pipeline Entry Point
+
+**Method:** `generateDocument(GenerateRequestDto request)` ([MarkdownService.java:119](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java#L119))
+
+```java
+public Resource generateDocument(GenerateRequestDto request) {
+    // Input validation
+    if (request == null) {
+        throw new IllegalArgumentException("Request cannot be null");
+    }
+
+    if (!StringUtils.hasText(request.getTemplateEncoded())) {
+        throw new IllegalArgumentException("Template is required and cannot be empty");
+    }
+
+    try {
+        logger.debug("Starting document generation pipeline");
+
+        // Step 1: Decode Inputs
+        String templateStr = decode(request.getTemplateEncoded());
+        String cssStr = decode(request.getCssEncoded());
+        String headerStr = decode(request.getHeaderEncoded());
+        String footerStr = decode(request.getFooterEncoded());
+        Map<String, Object> rawData = request.getDocPropertiesJsonData();
+
+        if (rawData == null) {
+            logger.warn("No document properties data provided, using empty map");
+            rawData = Map.of();
+        }
+
+        // Step 2: Handlebars Merge
+        Template template = handlebars.compileInline(templateStr);
+        String hybridContent = template.apply(rawData);
+
+        // Step 3: Markdown Conversion
+        Document doc = processMarkdownToDom(hybridContent);
+
+        // Step 4: DOM Assembly & XHTML Normalization
+        configureFinalDom(doc, cssStr, headerStr, footerStr);
+
+        // Step 5: PDF Generation
+        return generatePdf(doc);
+
+    } catch (IOException e) {
+        logger.error("IO error during document generation", e);
+        throw new RuntimeException("Error during template compilation or IO", e);
+    } catch (IllegalArgumentException e) {
+        logger.error("Invalid input provided", e);
+        throw new IllegalArgumentException("Invalid Base64 input provided: " + e.getMessage(), e);
+    }
+}
+```
+
+**Flow Breakdown:**
+
+**Step 1: Input Validation & Decoding**
+- Null check on request object (defensive programming)
+- Verify `templateEncoded` is present (secondary check after controller validation)
+- Decode all Base64 inputs using `decode()` helper method
+- Handle null `docPropertiesJsonData` with empty map (avoid NullPointerException)
+
+**Step 2: Handlebars Templating**
+- Compile template string into Handlebars `Template` object
+- Apply data map to template → expands loops, conditionals, variables
+- Result is "hybrid content" - HTML structure with raw Markdown inside `<md>` tags
+
+**Step 3: Markdown to HTML Conversion**
+- Parse hybrid content to Jsoup DOM
+- Find all `<md>` tags, render Markdown to HTML, replace in-place
+- Result is pure HTML DOM (no more Markdown)
+
+**Step 4: DOM Assembly**
+- Inject CSS into `<head>`
+- Prepend footer to `<body>`
+- Prepend header to `<body>` (appears above footer)
+- Enforce XHTML compliance (required for iText7)
+
+**Step 5: PDF Generation**
+- Convert XHTML to PDF binary using iText7
+- Return as `InputStreamResource` for streaming to client
+
+##### 3.3 Base64 Decoding
+
+**Method:** `decode(String base64)` ([MarkdownService.java:312](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java#L312))
+
+```java
+private String decode(String base64) {
+    if (!StringUtils.hasText(base64)) {
+        return "";
+    }
+    try {
+        return new String(Base64.getDecoder().decode(base64), StandardCharsets.UTF_8);
+    } catch (IllegalArgumentException e) {
+        logger.error("Failed to decode Base64 string", e);
+        throw new IllegalArgumentException("Invalid Base64 encoding: " + e.getMessage(), e);
+    }
+}
+```
+
+**Key Points:**
+- **Null Safety:** Returns empty string for null/blank input (optional fields)
+- **UTF-8 Encoding:** Ensures proper character encoding after Base64 decode
+- **Error Handling:** Catches and wraps `IllegalArgumentException` with context
+
+##### 3.4 Handlebars Templating (Stage 2)
+
+**Why Template-First?**
+
+Traditional approach:
+```
+Data + Markdown → Render Markdown → Insert into Template → HTML
+```
+
+Our approach:
+```
+Template + Data → Expand Template (keeping Markdown raw) → Render Markdown → HTML
+```
+
+**Benefit:** Enable loops that generate Markdown content:
+
+```handlebars
+{{#each users}}
+<md>
+## {{name}}
+- Email: {{email}}
+- Role: {{role}}
+</md>
+{{/each}}
+```
+
+After Handlebars (hybrid state):
+```html
+<md>
+## Alice
+- Email: alice@example.com
+- Role: Admin
+</md>
+<md>
+## Bob
+- Email: bob@example.com
+- Role: User
+</md>
+```
+
+After Markdown rendering:
+```html
+<h2>Alice</h2>
+<ul>
+  <li>Email: alice@example.com</li>
+  <li>Role: Admin</li>
+</ul>
+<h2>Bob</h2>
+<ul>
+  <li>Email: bob@example.com</li>
+  <li>Role: User</li>
+</ul>
+```
+
+##### 3.5 Markdown Processing (Stage 3)
+
+**Method:** `processMarkdownToDom(String hybridContent)` ([MarkdownService.java:331](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java#L331))
+
+```java
+private Document processMarkdownToDom(String hybridContent) {
+    // Parse the full document
+    Document doc = Jsoup.parse(hybridContent);
+
+    // Find all <md> tags
+    Elements mdBlocks = doc.select("md");
+
+    for (Element mdElement : mdBlocks) {
+        // CRITICAL: Use wholeText() to preserve newlines
+        String markdownText = mdElement.wholeText();
+
+        // Strip leading whitespace from each line
+        // IMPORTANT: Preserve blank lines (significant for paragraph separation)
+        String cleanMarkdown = markdownText.lines()
+                .map(line -> line.trim().isEmpty() ? "" : line.trim())
+                .collect(Collectors.joining("\n"));
+
+        // Render Markdown to HTML
+        String renderedHtml = htmlRenderer.render(markdownParser.parse(cleanMarkdown));
+
+        // Replace <md> element with rendered HTML
+        mdElement.after(renderedHtml);
+        mdElement.remove();
+    }
+
+    return doc;
+}
+```
+
+**Key Decisions:**
+
+**1. DOM-Based Processing (Not Regex)**
+- **Before (v2.0):** Used regex to find `<md>...</md>`, prone to errors with nested tags
+- **After (v2.0+):** Use Jsoup DOM parser - handles nested tags, attributes, malformed HTML
+- **Performance:** Single-pass parsing, in-place replacement (no string concatenation)
+
+**2. `wholeText()` vs `text()`**
+- **`text()`:** Strips newlines, merges lines → breaks Markdown lists/tables
+- **`wholeText()`:** Preserves newlines → correct Markdown parsing
+- **Example:**
+  ```
+  text() returns: "- Item 1- Item 2"  (broken list)
+  wholeText() returns: "- Item 1\n- Item 2"  (valid list)
+  ```
+
+**3. Whitespace Handling**
+- **Problem:** Templates often indent `<md>` blocks for readability
+  ```handlebars
+  <div>
+      <md>
+          ## Title
+          Content
+      </md>
+  </div>
+  ```
+  Without trimming, Markdown sees 8 spaces before `## Title` → might trigger code block
+
+- **Solution:** Trim leading whitespace from each line
+- **Critical:** Preserve blank lines (empty after trim) for paragraph separation
+  ```java
+  .map(line -> line.trim().isEmpty() ? "" : line.trim())
+  ```
+
+**4. In-Place Replacement**
+- `mdElement.after(renderedHtml)` - Insert rendered HTML after `<md>` tag
+- `mdElement.remove()` - Remove the `<md>` tag itself
+- Result: `<md>...</md>` is replaced with rendered HTML in the DOM
+
+##### 3.6 DOM Configuration (Stage 4)
+
+**Method:** `configureFinalDom(Document doc, String cssStr, String headerStr, String footerStr)` ([MarkdownService.java:377](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java#L377))
+
+```java
+private void configureFinalDom(Document doc, String cssStr, String headerStr, String footerStr) {
+    // Enforce XHTML Syntax for iText7
+    doc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+    doc.outputSettings().escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml);
+    doc.charset(StandardCharsets.UTF_8);
+
+    // Inject CSS
+    if (StringUtils.hasText(cssStr)) {
+        Element style = doc.head().appendElement("style");
+        style.html(cssStr);
+    }
+
+    // Inject Footer (prepended first so header appears on top)
+    if (StringUtils.hasText(footerStr)) {
+        logger.debug("Processing footer - HTML length: {}", footerStr.length());
+
+        // Parse footer as separate document for proper XHTML handling
+        Document footerDoc = Jsoup.parse(footerStr);
+        footerDoc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+        footerDoc.outputSettings().escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml);
+
+        String parsedFooter = footerDoc.body().html();
+        doc.body().prepend(parsedFooter);
+    }
+
+    // Inject Header (prepended after footer to appear at the very top)
+    if (StringUtils.hasText(headerStr)) {
+        logger.debug("Processing header - HTML length: {}", headerStr.length());
+
+        Document headerDoc = Jsoup.parse(headerStr);
+        headerDoc.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+        headerDoc.outputSettings().escapeMode(org.jsoup.nodes.Entities.EscapeMode.xhtml);
+
+        String parsedHeader = headerDoc.body().html();
+        doc.body().prepend(parsedHeader);
+    }
+}
+```
+
+**XHTML Compliance:**
+- **Why:** iText7 uses an XML parser - requires valid XML/XHTML
+- **What it does:**
+  - Self-closing tags: `<br />` not `<br>`
+  - Properly escaped entities: `&amp;` for `&`
+  - Quoted attributes: `class="foo"` not `class=foo`
+- **How:** Jsoup automatically enforces these rules with `.syntax(Syntax.xml)`
+
+**CSS Injection:**
+- Append `<style>` element to `<head>`
+- Use `.html(cssStr)` to set inner HTML (preserves CSS syntax)
+
+**Header/Footer Injection:**
+- **Why parse separately?** Ensures proper XHTML compliance even if header/footer has malformed HTML
+- **Order matters:**
+  1. Footer prepended first
+  2. Header prepended second (appears before footer in DOM)
+  3. Result: Header → Template Content → Footer
+- **Data URI Preservation:** Jsoup preserves `src="data:image/..."` attributes without corruption
+
+##### 3.7 PDF Generation (Stage 5)
+
+**Method:** `generatePdf(Document doc)` ([MarkdownService.java:177](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java#L177))
+
+```java
+private Resource generatePdf(Document doc) throws IOException {
+    try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        ConverterProperties properties = createConverterProperties();
+        HtmlConverter.convertToPdf(doc.html(), outputStream, properties);
+
+        logger.debug("PDF generated successfully, size: {} bytes", outputStream.size());
+        return new InputStreamResource(
+                new ByteArrayInputStream(outputStream.toByteArray())
+        );
+    }
+}
+```
+
+**Key Points:**
+- **ByteArrayOutputStream:** Accumulates PDF binary in memory
+- **Try-with-resources:** Automatically closes the stream (no memory leak)
+- **`doc.html()`:** Serializes Jsoup DOM to XHTML string
+- **`HtmlConverter.convertToPdf()`:** iText7 converts XHTML → PDF
+- **`InputStreamResource`:** Wraps byte array as Spring `Resource` for streaming to client
+
+**ConverterProperties Configuration:**
+
+**Method:** `createConverterProperties()` ([MarkdownService.java:202](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java#L202))
+
+```java
+private ConverterProperties createConverterProperties() {
+    ConverterProperties properties = new ConverterProperties();
+
+    // FontProvider for managing fonts
+    FontProvider fontProvider = new DefaultFontProvider(false, true, false);
+    properties.setFontProvider(fontProvider);
+
+    // Set base URI to empty string
+    // Data URIs are self-contained and don't need base URI resolution
+    properties.setBaseUri("");
+    logger.debug("Using base URI: (empty string)");
+
+    // Configure secure resource retrieval with SSRF protection
+    properties.setResourceRetriever(new SecureDataUriResourceRetriever());
+
+    return properties;
+}
+```
+
+**Configuration Details:**
+
+**1. FontProvider**
+- `DefaultFontProvider(false, true, false)` parameters:
+  - `registerStandardPdfFonts`: false - Don't register standard PDF fonts
+  - `registerSystemFonts`: true - **Use system fonts** (enables broader font support)
+  - `registerShippedFonts`: false - Don't register shipped fonts
+
+**2. Base URI**
+- Set to empty string `""`
+- **Why:** Data URIs are self-contained (all data embedded in the URI)
+- **Alternative:** Could use `"classpath:/static/"` for file-based resources
+- **Our approach:** No file-based images, only data URIs
+
+**3. Resource Retriever**
+- Custom `SecureDataUriResourceRetriever` implementation
+- Intercepts all resource requests (images, fonts, CSS)
+- Provides security controls (SSRF protection)
+
+##### 3.8 Secure Resource Retrieval - SSRF Protection
+
+**Inner Class:** `SecureDataUriResourceRetriever` ([MarkdownService.java:229](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java#L229))
+
+```java
+private static class SecureDataUriResourceRetriever implements IResourceRetriever {
+
+    @Override
+    public InputStream getInputStreamByUrl(java.net.URL url) throws java.io.IOException {
+        if (url == null) {
+            throw new java.io.IOException("URL cannot be null");
+        }
+
+        String urlString = url.toString();
+
+        // Allow data URIs - parse and decode inline
+        if (urlString.startsWith("data:")) {
+            return parseDataUri(urlString);
+        }
+
+        // Allow file:// URLs (local static resources)
+        if (urlString.startsWith("file://") || urlString.startsWith("jar:file:")) {
+            return url.openStream();
+        }
+
+        // Block ALL external HTTP/HTTPS requests (SSRF protection)
+        if (urlString.startsWith("http://") || urlString.startsWith("https://")) {
+            throw new java.io.IOException("External HTTP/HTTPS requests are blocked for security reasons: " + urlString);
+        }
+
+        return url.openStream();
+    }
+
+    @Override
+    public byte[] getByteArrayByUrl(java.net.URL url) throws java.io.IOException {
+        try (InputStream is = getInputStreamByUrl(url)) {
+            return is.readAllBytes();
+        }
+    }
+}
+```
+
+**What is SSRF?**
+- **Server-Side Request Forgery:** Attacker tricks server into making requests to internal/external resources
+- **Example Attack:**
+  ```html
+  <img src="http://localhost:8080/admin/delete-users" />
+  ```
+  If allowed, the server would make a request to its own admin endpoint during PDF generation.
+
+**Our Protection:**
+- ✅ **Allow:** Data URIs (safe - data is embedded, no network request)
+- ✅ **Allow:** Local file:// URLs (controlled - only local resources)
+- ❌ **Block:** HTTP/HTTPS URLs (unsafe - could target internal services)
+
+**Data URI Parsing:**
+
+**Method:** `parseDataUri(String dataUri)` ([MarkdownService.java:276](src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java#L276))
+
+```java
+private InputStream parseDataUri(String dataUri) throws IOException {
+    // Find comma separator
+    int commaIndex = dataUri.indexOf(',');
+    if (commaIndex < 0 || commaIndex >= dataUri.length() - 1) {
+        throw new IOException("Malformed data URI: missing comma separator");
+    }
+
+    // Extract metadata and data parts
+    String metadata = dataUri.substring(5, commaIndex); // Skip "data:"
+    String data = dataUri.substring(commaIndex + 1);
+
+    // Decode based on encoding type
+    byte[] decodedData;
+    if (metadata.contains("base64")) {
+        // Base64 encoded data (most common for images)
+        try {
+            decodedData = Base64.getDecoder().decode(data);
+        } catch (IllegalArgumentException e) {
+            throw new IOException("Failed to decode base64 data in data URI", e);
+        }
+    } else {
+        // URL-encoded data (less common, mainly for text)
+        String decoded = java.net.URLDecoder.decode(data, StandardCharsets.UTF_8);
+        decodedData = decoded.getBytes(StandardCharsets.UTF_8);
+    }
+
+    return new ByteArrayInputStream(decodedData);
+}
+```
+
+**Data URI Format (RFC 2397):**
+```
+data:[<mediatype>][;base64],<data>
+
+Example:
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...
+│    │         │       │
+│    │         │       └─ Base64-encoded binary data
+│    │         └───────── Encoding flag
+│    └─────────────────── MIME type
+└──────────────────────── Protocol
+```
+
+**Parsing Steps:**
+1. Find comma (separates metadata from data)
+2. Extract metadata: `image/png;base64`
+3. Extract data: `iVBORw0KGgoAAAANSUhEUg...`
+4. Check if base64 encoding is specified
+5. Decode base64 → binary bytes
+6. Return as `ByteArrayInputStream` for iText7
+
+**Why This Works:**
+- iText7 encounters `<img src="data:image/png;base64,...">` in the HTML
+- Calls `getInputStreamByUrl(new URL("data:image/png;base64,..."))`
+- Our custom retriever intercepts the call
+- Parses and decodes the data URI
+- Returns binary image stream
+- iText7 renders the image in the PDF
+
+### Complete Data Flow Example
+
+Let's trace a real request through the entire pipeline:
+
+**1. Client Sends Request:**
+```json
+{
+  "templateEncoded": "PGRpdj48aDE+e3t0aXRsZX19PC9oMT48bWQ+IyMge3tuYW1lfX08L21kPjwvZGl2Pg==",
+  "cssEncoded": "aDEgeyBjb2xvcjogYmx1ZTsgfQ==",
+  "docPropertiesJsonData": {
+    "title": "Welcome",
+    "name": "Alice"
+  }
+}
+```
+
+**2. Controller Receives & Validates:**
+- Spring deserializes JSON to `GenerateRequestDto`
+- Validation passes (`templateEncoded` is present)
+- Calls `markdownService.generateDocument(request)`
+
+**3. Service Decodes Base64:**
+```
+templateEncoded → "<div><h1>{{title}}</h1><md>## {{name}}</md></div>"
+cssEncoded → "h1 { color: blue; }"
+```
+
+**4. Handlebars Processes Template:**
+```
+Input: "<div><h1>{{title}}</h1><md>## {{name}}</md></div>"
+Data: {title: "Welcome", name: "Alice"}
+Output: "<div><h1>Welcome</h1><md>## Alice</md></div>"
+```
+
+**5. Markdown Rendering:**
+- Parse to Jsoup DOM
+- Find `<md>` tag with content `"## Alice"`
+- Render Markdown → `<h2>Alice</h2>`
+- Replace: `<div><h1>Welcome</h1><h2>Alice</h2></div>`
+
+**6. DOM Configuration:**
+- Inject CSS: `<head><style>h1 { color: blue; }</style></head>`
+- Enforce XHTML compliance
+- Final HTML:
+  ```html
+  <!DOCTYPE html>
+  <html>
+    <head><style>h1 { color: blue; }</style></head>
+    <body>
+      <div><h1>Welcome</h1><h2>Alice</h2></div>
+    </body>
+  </html>
+  ```
+
+**7. PDF Generation:**
+- iText7 converts XHTML → PDF binary
+- Wrap in `InputStreamResource`
+
+**8. Controller Returns Response:**
+```
+HTTP/1.1 200 OK
+Content-Type: application/pdf
+Content-Disposition: inline; filename=generated_report.pdf
+
+[PDF binary data...]
+```
+
+### Key Takeaways
+
+**Architecture Principles:**
+1. **Separation of Concerns:** Controller handles HTTP, Service handles business logic
+2. **Template-First:** Enables dynamic Markdown generation through loops/conditionals
+3. **DOM-Based Processing:** More robust than regex, handles complex HTML
+4. **XHTML Compliance:** Automatic enforcement ensures iText7 compatibility
+5. **Security First:** SSRF protection blocks external resource requests
+
+**Performance Optimizations:**
+1. **No Temporary Files:** Data URIs decoded on-the-fly (no I/O overhead)
+2. **Single-Pass Processing:** DOM parsed once, modified in-place
+3. **Stream-Based Output:** PDF streamed directly to client (no intermediate storage)
+4. **Stateless Design:** No state management, scales horizontally
+
+**Error Handling Strategy:**
+1. **Fail Fast:** Validation at controller layer before service processing
+2. **Descriptive Errors:** Clear exception messages with context
+3. **Defensive Programming:** Null checks, try-catch with proper logging
+4. **Graceful Degradation:** Empty strings for optional fields, default values for null data
+
+**Testing Strategy:**
+- **Unit Tests:** Test individual methods in isolation (MarkdownServiceTest)
+- **Integration Tests:** Test full HTTP request/response cycle (InitialControllerIntegrationTest)
+- **Security Tests:** Verify SSRF protection (SecureDataUriResourceRetrieverTest)
+- **Edge Cases:** Test validation errors, malformed input, boundary conditions
 
 ## Recent Updates
 
