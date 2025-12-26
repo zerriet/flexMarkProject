@@ -3,12 +3,14 @@
 ## Table of Contents
 - [Project Overview](#project-overview)
 - [Quick Start](#quick-start)
+- [API Documentation (Swagger)](#api-documentation-swagger)
 - [Architecture Pipeline](#architecture-pipeline)
 - [API Reference](#api-reference)
 - [Image Handling](#image-handling)
 - [Technical Details](#technical-details--constraints)
 - [Error Handling & Logging](#error-handling--logging)
 - [Common Issues & Solutions](#common-issues--solutions)
+- [Code Walkthrough](#code-walkthrough)
 - [Recent Updates](#recent-updates)
 
 ## Project Overview
@@ -70,6 +72,129 @@ request.setDocPropertiesJsonData(Map.of("title", "Hello World"));
 // POST to /api/content/submit
 // Returns PDF binary
 ```
+
+## API Documentation (Swagger)
+
+### Interactive API Documentation
+
+The service provides comprehensive interactive API documentation powered by **Swagger/OpenAPI 3.0**.
+
+**Access Swagger UI:**
+- **URL:** http://localhost:8080/swagger-ui.html
+- **OpenAPI Spec:** http://localhost:8080/v3/api-docs
+
+### Features
+
+The Swagger UI provides:
+
+✅ **Interactive Testing** - Test the API directly from your browser
+✅ **Multiple Examples** - Pre-configured request examples you can try immediately
+✅ **Complete Schema Documentation** - Detailed field descriptions and requirements
+✅ **Error Response Examples** - See what 400 and 500 errors look like
+✅ **Request/Response Models** - Full JSON schema documentation
+
+### Quick Test
+
+1. Start the application:
+   ```bash
+   mvn spring-boot:run
+   ```
+
+2. Open Swagger UI: http://localhost:8080/swagger-ui.html
+
+3. Expand **"PDF Document Generation"** → `POST /api/content/submit`
+
+4. Click **"Try it out"**
+
+5. Select an example:
+   - **Simple template** - Minimal example with Handlebars variables
+   - **Template with loops** - Handlebars `{{#each}}` with Markdown tables
+   - **Full example with header/footer** - Complete document with data URIs
+
+6. Click **"Execute"**
+
+7. View the response (PDF binary or error)
+
+### Example Requests
+
+#### Example 1: Simple Template
+```json
+{
+  "templateEncoded": "PGRpdj48aDE+e3t0aXRsZX19PC9oMT48bWQ+IyMge3tuYW1lfX08L21kPjwvZGl2Pg==",
+  "cssEncoded": "aDEgeyBjb2xvcjogYmx1ZTsgfQ==",
+  "docPropertiesJsonData": {
+    "title": "Welcome",
+    "name": "Alice"
+  }
+}
+```
+**Decoded template:** `<div><h1>{{title}}</h1><md>## {{name}}</md></div>`
+
+#### Example 2: Template with Loops
+```json
+{
+  "templateEncoded": "PGRpdj48aDE+e3t0aXRsZX19PC9oMT57eyNlYWNoIGl0ZW1zfX08bWQ+fCBQcm9kdWN0IHwgUHJpY2UgfAp8LS0tfC0tLXwKfCB7e25hbWV9fSB8ICR7e3ByaWNlfX0gfDwvbWQ+e3svZWFjaH19PC9kaXY+",
+  "cssEncoded": "Ym9keSB7IGZvbnQtZmFtaWx5OiBBcmlhbDsgfQ==",
+  "docPropertiesJsonData": {
+    "title": "Product List",
+    "items": [
+      {"name": "Widget", "price": "99.99"},
+      {"name": "Gadget", "price": "149.99"}
+    ]
+  }
+}
+```
+
+### API Annotations
+
+The codebase includes comprehensive OpenAPI annotations:
+
+**DTO Level ([GenerateRequestDto.java](src/main/java/com/flexmark/flexMarkProject/dto/GenerateRequestDto.java)):**
+- `@Schema` on class with complete request example
+- Field-level `@Schema` with descriptions, examples, and required status
+- Base64-encoded sample values for all fields
+
+**Controller Level ([InitialController.java](src/main/java/com/flexmark/flexMarkProject/controller/InitialController.java)):**
+- `@Tag` - Groups API under "PDF Document Generation"
+- `@Operation` - Documents endpoint with pipeline overview, features, security notes
+- `@ApiResponses` - Documents all response codes (200, 400, 500)
+- `@Parameter` - Documents request body with 3 interactive examples
+
+**Configuration ([OpenApiConfig.java](src/main/java/com/flexmark/flexMarkProject/config/OpenApiConfig.java)):**
+- API metadata (title, version, description)
+- Contact information and license
+- Server configurations (local & production)
+- Comprehensive API overview with features and use cases
+
+### Configuration
+
+Swagger UI settings in `application.properties`:
+
+```properties
+# Swagger/OpenAPI Configuration
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.enabled=true
+springdoc.swagger-ui.try-it-out-enabled=true
+springdoc.swagger-ui.operations-sorter=method
+springdoc.swagger-ui.tags-sorter=alpha
+springdoc.swagger-ui.display-request-duration=true
+springdoc.swagger-ui.doc-expansion=none
+```
+
+### Production Deployment
+
+For production environments, disable Swagger UI:
+
+```properties
+springdoc.swagger-ui.enabled=false
+```
+
+Or protect with Spring Security to restrict access.
+
+### Additional Resources
+
+For detailed Swagger setup instructions, see [SWAGGER_SETUP.md](../../../SWAGGER_SETUP.md)
 
 ## Architecture Pipeline
 
@@ -1154,6 +1279,37 @@ Content-Disposition: inline; filename=generated_report.pdf
 - **Edge Cases:** Test validation errors, malformed input, boundary conditions
 
 ## Recent Updates
+
+### v6.1: Swagger/OpenAPI Documentation Integration
+- **Interactive API Documentation:**
+  - Added SpringDoc OpenAPI dependency (version 2.6.0)
+  - Comprehensive Swagger UI at `/swagger-ui.html`
+  - OpenAPI 3.0 specification at `/v3/api-docs`
+- **DTO Enhancements:**
+  - Added `@Schema` annotations to `GenerateRequestDto` with field-level documentation
+  - Included Base64 examples for all fields
+  - Added complete request example at class level
+- **Controller Documentation:**
+  - Added `@Tag` annotation grouping endpoints under "PDF Document Generation"
+  - Added `@Operation` with detailed pipeline overview, features, and security notes
+  - Added `@ApiResponses` documenting 200, 400, and 500 response codes
+  - Added `@Parameter` with 3 interactive request examples:
+    - Simple template example
+    - Template with loops example
+    - Full example with header/footer and data URIs
+- **Configuration:**
+  - Created `OpenApiConfig` class with comprehensive API metadata
+  - Configured contact information, license, and server URLs
+  - Added extensive API description with features, pipeline, and use cases
+- **Application Properties:**
+  - Configured Swagger UI path and settings
+  - Enabled interactive testing ("Try it out" feature)
+  - Configured operation sorting and request duration display
+- **Documentation:**
+  - Created `SWAGGER_SETUP.md` with detailed setup and usage instructions
+  - Updated `flexmark_readme.md` with Swagger section
+  - Included example requests with decoded values
+- **Benefit:** Developers can now explore and test the API interactively through a browser, with comprehensive documentation and ready-to-use examples. No Postman or curl commands needed for testing.
 
 ### v6.0: Simplified Architecture & Native Data URI Support
 - **Architecture Simplification:**
