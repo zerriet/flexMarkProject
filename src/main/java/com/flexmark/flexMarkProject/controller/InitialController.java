@@ -3,6 +3,7 @@ package com.flexmark.flexMarkProject.controller;
 import com.flexmark.flexMarkProject.dto.GenerateRequestDto;
 import com.flexmark.flexMarkProject.service.MarkdownService;
 
+import jakarta.validation.Valid;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -36,14 +37,14 @@ public class InitialController {
     }
 
     /**
-     * Receives raw Markdown text from the client, triggers the storage process,
-     * and returns the converted HTML fragment.
+     * Receives document generation request with Base64-encoded resources,
+     * triggers the generation pipeline, and returns the generated PDF.
      *
-     * @param data The raw Markdown string sent in the request body.
-     * @return The processed HTML string (fragment) ready for display or further processing.
+     * @param data The request DTO containing template, CSS, header, footer, image, and data map.
+     * @return ResponseEntity containing the generated PDF as a Resource.
      */
     @PostMapping("/submit")
-    public ResponseEntity<@NotNull Resource> submitContent(@RequestBody GenerateRequestDto data) {
+    public ResponseEntity<@NotNull Resource> submitContent(@Valid @RequestBody GenerateRequestDto data) {
         Resource generatedPdf = markdownService.generateDocument(data);
 
         // 2. Return it with specific PDF headers
