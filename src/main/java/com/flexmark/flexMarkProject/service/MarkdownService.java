@@ -64,10 +64,6 @@ import java.util.stream.Collectors;
 public class MarkdownService {
     private static final Logger logger = LoggerFactory.getLogger(MarkdownService.class);
 
-    // Static resource paths
-    private static final String STATIC_RESOURCE_PATH = "static/";
-    private static final String CLASSPATH_STATIC_PREFIX = "classpath:/static/";
-
     private final Handlebars handlebars;
     private final Parser markdownParser;
     private final HtmlRenderer htmlRenderer;

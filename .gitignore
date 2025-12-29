@@ -35,3 +35,6 @@ build/
 ### Temp Files ###
 temp/
 test-output.pdf
+
+### Presentation Files ###
+PRESENTATION_GUIDE.md
