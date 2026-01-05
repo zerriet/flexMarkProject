@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Temp Files ###
+temp/
+test-output.pdf
+
+### Presentation Files ###
+PRESENTATION_GUIDE.md

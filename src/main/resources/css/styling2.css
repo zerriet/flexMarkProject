@@ -1,0 +1,86 @@
+@page {
+    size: A4;
+    margin: 2.5cm;
+    @top-center { content: element(header); }
+    @bottom-center { content: element(footer); }
+
+    /* Optional: Ensure content doesn't hit the footer.
+       2.5cm is usually enough, but you can set specific bottom margin if needed */
+    margin-bottom: 3cm;
+}
+
+/* --- HEADER & FOOTER POSITIONING --- */
+#pdf-header {
+    position: running(header);
+    width: 100%;
+}
+
+#pdf-footer {
+    position: running(footer);
+    width: 100%;
+}
+
+/* --- FOOTER CONTENT STYLING (New) --- */
+/* Use this to clean up your HTML template so you don't need inline styles */
+#pdf-footer table {
+    width: 100%;
+    border: none;
+    border-spacing: 0;
+}
+
+#pdf-footer td {
+    border: none; /* Override standard td border */
+    padding-top: 10px;
+    vertical-align: middle;
+}
+
+#pdf-footer .footer-left {
+    text-align: left;
+}
+
+#pdf-footer .footer-right {
+    text-align: right;
+    font-size: 10pt;
+    color: #999;
+}
+
+#pdf-footer img {
+    height: 40px;
+    width: auto;
+}
+
+/* --- PAGE NUMBERING (CRITICAL ADDITION) --- */
+/* This works with <span class="page-number"></span> */
+.page-number::after {
+    content: counter(page);
+}
+
+/* --- GENERAL BODY STYLING --- */
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+}
+
+h1 { color: #2c3e50; border-bottom: 2px solid #2c3e50; }
+h2 { color: #e67e22; margin-top: 20px; page-break-after: avoid; }
+
+/* --- TABLE HANDLING --- */
+/* Main content tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+}
+
+tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+}
+
+th { background-color: #f2f2f2; border: 1px solid #ccc; padding: 8px; font-weight: bold; }
+td { border: 1px solid #ccc; padding: 8px; }
+
+/* Utility */
+.spacer-text { color: #666; margin-bottom: 20px; text-align: justify; }
