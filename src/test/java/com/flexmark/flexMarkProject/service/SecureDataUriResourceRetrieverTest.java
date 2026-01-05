@@ -64,7 +64,7 @@ class SecureDataUriResourceRetrieverTest {
     /**
      * Custom URLStreamHandlerFactory for data: protocol support in tests.
      */
-    private static class DataUrlStreamHandlerFactory implements URLStreamHandlerFactory {
+    private static class  DataUrlStreamHandlerFactory implements URLStreamHandlerFactory {
         private static boolean registered = false;
 
         @Override
