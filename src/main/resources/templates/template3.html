@@ -1,0 +1,162 @@
+<div class="report-content">
+    <h1>List Formatting Test Document</h1>
+
+    <div class="meta-info">
+        <p><strong>Generated:</strong> {{generatedBy}} | <strong>Batch ID:</strong> {{batchId}}</p>
+    </div>
+
+    <h3>1. Simple Numbered List (Markdown)</h3>
+    <p>Testing basic numbered list rendering:</p>
+    <md>
+1. First item in numbered list
+2. Second item in numbered list
+3. Third item in numbered list
+4. Fourth item in numbered list
+    </md>
+
+    <h3>2. Simple Bullet List (Markdown)</h3>
+    <p>Testing basic bullet point rendering:</p>
+    <md>
+- First bullet point
+- Second bullet point
+- Third bullet point
+- Fourth bullet point
+    </md>
+
+    <h3>3. Nested Numbered Lists (Markdown)</h3>
+    <p>Testing indented numbered sub-lists:</p>
+    <md>
+1. Main item one
+   1. Sub-item 1.1
+   2. Sub-item 1.2
+   3. Sub-item 1.3
+2. Main item two
+   1. Sub-item 2.1
+   2. Sub-item 2.2
+3. Main item three
+   1. Sub-item 3.1
+      1. Deep nested 3.1.1
+      2. Deep nested 3.1.2
+   2. Sub-item 3.2
+    </md>
+
+    <h3>4. Nested Bullet Lists (Markdown)</h3>
+    <p>Testing indented bullet sub-lists:</p>
+    <md>
+- Main bullet one
+  - Sub-bullet A
+  - Sub-bullet B
+  - Sub-bullet C
+- Main bullet two
+  - Sub-bullet A
+    - Deep nested i
+    - Deep nested ii
+  - Sub-bullet B
+- Main bullet three
+    </md>
+
+    <h3>5. HTML Ordered Lists with Custom Types</h3>
+    <p>Using HTML for letter and roman numeral styles:</p>
+
+    <h4>5.1 Alphabetical Lists (a, b, c, d)</h4>
+    <ol type="a">
+        <li>Alpha item</li>
+        <li>Bravo item</li>
+        <li>Charlie item</li>
+        <li>Delta item</li>
+    </ol>
+
+    <h4>5.2 Uppercase Alphabetical (A, B, C, D)</h4>
+    <ol type="A">
+        <li>Alpha item uppercase</li>
+        <li>Bravo item uppercase</li>
+        <li>Charlie item uppercase</li>
+        <li>Delta item uppercase</li>
+    </ol>
+
+    <h4>5.3 Roman Numerals Lowercase (i, ii, iii, iv)</h4>
+    <ol type="i">
+        <li>First roman item</li>
+        <li>Second roman item</li>
+        <li>Third roman item</li>
+        <li>Fourth roman item</li>
+    </ol>
+
+    <h4>5.4 Roman Numerals Uppercase (I, II, III, IV)</h4>
+    <ol type="I">
+        <li>First Roman item</li>
+        <li>Second Roman item</li>
+        <li>Third Roman item</li>
+        <li>Fourth Roman item</li>
+    </ol>
+
+    <h3>6. Complex Nested HTML Lists</h3>
+    <p>Combining numbered, lettered, and roman numeral nesting:</p>
+    <ol type="1">
+        <li>First main section
+            <ol type="a">
+                <li>Sub-section alpha
+                    <ol type="i">
+                        <li>Detail point one</li>
+                        <li>Detail point two</li>
+                        <li>Detail point three</li>
+                    </ol>
+                </li>
+                <li>Sub-section bravo</li>
+                <li>Sub-section charlie</li>
+            </ol>
+        </li>
+        <li>Second main section
+            <ol type="a">
+                <li>Sub-section alpha</li>
+                <li>Sub-section bravo
+                    <ol type="i">
+                        <li>Detail point one</li>
+                        <li>Detail point two</li>
+                    </ol>
+                </li>
+            </ol>
+        </li>
+        <li>Third main section
+            <ol type="a">
+                <li>Sub-section alpha</li>
+                <li>Sub-section bravo</li>
+                <li>Sub-section charlie</li>
+                <li>Sub-section delta</li>
+            </ol>
+        </li>
+    </ol>
+
+    <h3>7. Dynamic List from Data</h3>
+    <p>Rendering health checks as a numbered list:</p>
+    <ol type="1">
+        {{#each healthChecks}}
+        <li><strong>{{this.id}}</strong> - {{this.component}}: {{this.status}}</li>
+        {{/each}}
+    </ol>
+
+    <h3>8. Mixed Nested Lists</h4>
+    <p>Combining bullets and numbers:</p>
+    <ol type="1">
+        <li>First numbered item
+            <ul>
+                <li>Bullet under number</li>
+                <li>Another bullet under number</li>
+            </ul>
+        </li>
+        <li>Second numbered item
+            <ul>
+                <li>Bullet A</li>
+                <li>Bullet B
+                    <ol type="i">
+                        <li>Roman under bullet</li>
+                        <li>Another roman</li>
+                    </ol>
+                </li>
+            </ul>
+        </li>
+        <li>Third numbered item</li>
+    </ol>
+
+    <p><em>End of List Formatting Test.</em></p>
+</div>

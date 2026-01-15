@@ -59,7 +59,7 @@ import java.util.stream.Collectors;
  * parses the base64-encoded data, and provides the decoded binary stream to iText7. This approach
  * eliminates temporary file overhead while maintaining SSRF protection by blocking external HTTP/HTTPS requests.
  * </p>
- */
+ */ 
 @Service
 public class MarkdownService {
     private static final Logger logger = LoggerFactory.getLogger(MarkdownService.class);

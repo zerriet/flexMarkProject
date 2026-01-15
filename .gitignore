@@ -38,3 +38,12 @@ test-output.pdf
 
 ### Presentation Files ###
 PRESENTATION_GUIDE.md
+
+### Claude files ###
+CLAUDE.md
+
+### mfe folder ###
+mfe/**
+
+### Windows reserved names ###
+nul
