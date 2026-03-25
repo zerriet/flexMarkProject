@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlexMark Editor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --toolbar-h:   48px;
+      --sidebar-h:   200px;
+      --panel-bg:    #1e1e2e;
+      --panel-border:#313244;
+      --text:        #cdd6f4;
+      --text-muted:  #6c7086;
+      --accent:      #89b4fa;
+      --accent-hover:#74c7ec;
+      --error:       #f38ba8;
+      --cm-bg:       #181825;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--panel-bg);
+      color: var(--text);
+      font-size: 14px;
+      overflow: hidden;
+    }
+
+    #app { display: flex; flex-direction: column; height: 100vh; }
+
+    /* ── Toolbar ── */
+    #toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: var(--toolbar-h);
+      padding: 0 16px;
+      background: #11111b;
+      border-bottom: 1px solid var(--panel-border);
+      flex-shrink: 0;
+    }
+
+    #toolbar h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+      margin-right: auto;
+    }
+
+    #toolbar label {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    #presetSelect {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 4px 8px;
+      outline: none;
+      cursor: pointer;
+    }
+    #presetSelect:focus { border-color: var(--accent); }
+    #presetSelect option { background: var(--panel-bg); }
+
+    #error-msg {
+      font-size: 12px;
+      color: var(--error);
+      max-width: 340px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: none;
+    }
+    #error-msg.visible { display: block; }
+
+    #generateBtn {
+      background: var(--accent);
+      color: #11111b;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    #generateBtn:hover    { background: var(--accent-hover); }
+    #generateBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid #11111b44;
+      border-top-color: #11111b;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    #generateBtn.loading .spinner   { display: inline-block; }
+    #generateBtn.loading .btn-label { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Split pane ── */
+    #split-pane {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .pane-col {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 80px;
+    }
+
+    #left-pane  { width: 50%; }
+    #right-pane { flex: 1; }
+
+    .pane-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      background: #11111b;
+      border-bottom: 1px solid var(--panel-border);
+      flex-shrink: 0;
+    }
+
+    /* ── Drag handle ── */
+    #drag-handle {
+      width: 5px;
+      background: var(--panel-border);
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    #drag-handle:hover,
+    #drag-handle.dragging { background: var(--accent); }
+
+    /* ── CodeJar editor ── */
+    #editor-scroll {
+      flex: 1;
+      overflow: auto;
+      background: var(--cm-bg);
+    }
+
+    #editor {
+      font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      min-height: 100%;
+      padding: 16px 20px;
+      color: #cdd6f4;
+      background: var(--cm-bg);
+      outline: none;
+      white-space: pre;
+      word-break: normal;
+      overflow-wrap: normal;
+      tab-size: 2;
+      caret-color: #cdd6f4;
+    }
+
+    /* Prism base markup tokens */
+    #editor .token.tag         { color: #cba6f7; }
+    #editor .token.attr-name   { color: #89b4fa; }
+    #editor .token.attr-value,
+    #editor .token.string      { color: #a6e3a1; }
+    #editor .token.comment     { color: #6c7086; font-style: italic; }
+    #editor .token.punctuation { color: #9399b2; }
+    #editor .token.doctype     { color: #6c7086; }
+
+    /* Custom hybridTemplate tokens */
+    #editor .token.hbs-variable {
+      color: #f9e2af;
+      background: #f9e2af1a;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+    #editor .token.hbs-block {
+      color: #89dceb;
+      background: #89dceb1a;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+    #editor .token.md-tag {
+      color: #a6e3a1;
+      background: #a6e3a11a;
+      border-radius: 2px;
+      padding: 0 1px;
+      font-weight: 600;
+    }
+
+    /* ── Preview pane ── */
+    #preview-scroll {
+      flex: 1;
+      overflow-y: auto;
+      background: #fff;
+      color: #111;
+    }
+
+    .seg-html {
+      background: #f5f5f5;
+      border-left: 3px solid #d0d0d0;
+      padding: 8px 16px;
+    }
+    .seg-html .seg-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+    .seg-html pre {
+      font-family: 'Fira Code', Consolas, monospace;
+      font-size: 12px;
+      color: #777;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin: 0;
+    }
+
+    .seg-md {
+      padding: 20px 28px;
+      border-left: 3px solid var(--accent);
+      background: #fff;
+    }
+    .seg-md h1, .seg-md h2, .seg-md h3 { margin: 0.75em 0 0.4em; }
+    .seg-md p   { margin: 0.5em 0; line-height: 1.6; }
+    .seg-md ul,
+    .seg-md ol  { margin: 0.5em 0 0.5em 1.5em; }
+    .seg-md li  { margin: 0.2em 0; }
+    .seg-md table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+      font-size: 13px;
+    }
+    .seg-md th,
+    .seg-md td  { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+    .seg-md th  { background: #f0f0f0; }
+    .seg-md code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+    .seg-md pre  { background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; }
+    .seg-md pre code { background: none; padding: 0; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      display: flex;
+      height: var(--sidebar-h);
+      flex-shrink: 0;
+      border-top: 2px solid var(--panel-border);
+    }
+
+    .side-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--panel-border);
+      min-width: 0;
+    }
+    .side-panel:last-child { border-right: none; }
+
+    .panel-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      background: #11111b;
+      border-bottom: 1px solid var(--panel-border);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .panel-toggle { font-size: 9px; transition: transform 0.2s; display: inline-block; }
+    .side-panel.collapsed .panel-toggle { transform: rotate(-90deg); }
+
+    .panel-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .side-panel.collapsed .panel-body { display: none; }
+
+    .panel-body textarea {
+      flex: 1;
+      min-height: 0;
+      display: block;
+      width: 100%;
+      background: var(--cm-bg);
+      color: var(--text);
+      border: none;
+      font-family: 'Fira Code', Consolas, monospace;
+      font-size: 12px;
+      padding: 8px 12px;
+      resize: none;
+      outline: none;
+    }
+
+    .panel-error {
+      font-size: 11px;
+      color: var(--error);
+      padding: 2px 12px 4px;
+      background: var(--cm-bg);
+      display: none;
+      flex-shrink: 0;
+    }
+    .panel-error.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Toolbar ── -->
+  <div id="toolbar">
+    <h1>⚡ FlexMark Editor</h1>
+    <label for="presetSelect">Preset</label>
+    <select id="presetSelect">
+      <option value="0">1 — Hello World</option>
+      <option value="1">2 — Loan Offer Letter</option>
+    </select>
+    <span id="error-msg"></span>
+    <button id="generateBtn" title="Generate PDF (Cmd/Ctrl+Enter)">
+      <span class="spinner"></span>
+      <span class="btn-label">Generate PDF</span>
+    </button>
+  </div>
+
+  <!-- ── Split pane ── -->
+  <div id="split-pane">
+
+    <div id="left-pane" class="pane-col">
+      <div class="pane-header">Template Editor</div>
+      <div id="editor-scroll">
+        <div id="editor" spellcheck="false"></div>
+      </div>
+    </div>
+
+    <div id="drag-handle"></div>
+
+    <div id="right-pane" class="pane-col">
+      <div class="pane-header">Preview</div>
+      <div id="preview-scroll">
+        <div id="preview"></div>
+      </div>
+    </div>
+
+  </div><!-- /split-pane -->
+
+  <!-- ── Sidebar ── -->
+  <div id="sidebar">
+
+    <div class="side-panel">
+      <div class="panel-header" onclick="togglePanel(this)">
+        <span class="panel-toggle">▼</span>Sample Data (JSON)
+      </div>
+      <div class="panel-body">
+        <textarea id="sampleData" spellcheck="false"></textarea>
+        <div class="panel-error" id="sampleDataError">&#9888; Invalid JSON — using empty object</div>
+      </div>
+    </div>
+
+    <div class="side-panel">
+      <div class="panel-header" onclick="togglePanel(this)">
+        <span class="panel-toggle">▼</span>CSS
+      </div>
+      <div class="panel-body">
+        <textarea id="cssEditor" spellcheck="false"
+                  placeholder="/* Custom CSS injected into the PDF */"></textarea>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+</div><!-- /app -->
+
+<script type="module">
+import { CodeJar } from 'https://esm.sh/codejar@4';
+import Prism       from 'https://esm.sh/prismjs';
+import { marked }  from 'https://esm.sh/marked';
+
+// ── Custom Prism language ────────────────────────────────────────────────────
+Prism.languages.hybridTemplate = Prism.languages.extend('markup', {});
+Prism.languages.insertBefore('hybridTemplate', 'tag', {
+  'md-tag':       { pattern: /<\/?md>/gi },
+  'hbs-block':    { pattern: /\{\{[#/][^}]*?\}\}/g },
+  'hbs-variable': { pattern: /\{\{(?![#/])[^{}]*?\}\}/g }
+});
+
+// ── Preset 1 — Hello World ───────────────────────────────────────────────────
+const P1_TEMPLATE = `<div>
+  <h1>{{title}}</h1>
+  <md>
+## Hello {{name}}
+
+This is a **Markdown** section with a list:
+
+- Item one
+- Item two
+  </md>
+  <p>End of document.</p>
+</div>`;
+
+const P1_DATA = { "title": "Test", "name": "Alice" };
+
+// ── Preset 2 — Loan Offer Letter ─────────────────────────────────────────────
+// Simplified from docs/templates/business_loan_template.html.
+// Uses only flat and one-level-deep tokens so the live preview can substitute
+// all values. The {{#each}} schedule table is intentionally omitted here —
+// it renders correctly in the generated PDF but not in the browser preview.
+const P2_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 11pt; color: #1a1a1a; margin: 0; padding: 0; }
+    .page { padding: 48px 56px; }
+    .doc-title { font-size: 18pt; font-weight: bold; letter-spacing: 0.5px; margin: 0 0 4px 0; }
+    .doc-sub   { font-size: 10pt; color: #555; }
+    .doc-ref   { display: flex; justify-content: space-between; font-size: 9.5pt; color: #444;
+                 border-top: 2px solid #1a1a1a; margin-top: 12px; padding-top: 10px; }
+    h2 { font-size: 11.5pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.6px;
+         border-bottom: 1px solid #ccc; padding-bottom: 4px; margin: 28px 0 12px; }
+    .grid { display: flex; flex-wrap: wrap; border: 1px solid #ccc; margin-bottom: 16px; }
+    .cell { width: 50%; box-sizing: border-box; padding: 8px 14px; border-bottom: 1px solid #eee; }
+    .cell:nth-child(odd) { border-right: 1px solid #eee; }
+    .lbl { font-size: 8.5pt; color: #666; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+    .val { font-size: 10.5pt; font-weight: bold; }
+    .terms p  { font-size: 10pt; line-height: 1.65; margin: 0 0 10px 0; }
+    .terms ul, .terms ol { font-size: 10pt; line-height: 1.65; padding-left: 20px; margin: 0 0 10px 0; }
+    .terms li { margin-bottom: 4px; }
+    .signoff  { display: flex; gap: 40px; margin-top: 20px; }
+    .sig-blk  { flex: 1; border-top: 1px solid #1a1a1a; padding-top: 10px; }
+    .sig-role { font-size: 9pt; color: #555; margin-bottom: 24px; }
+    .sig-name { font-size: 10pt; font-weight: bold; border-top: 1px solid #aaa; padding-top: 6px; }
+    .sig-ttl  { font-size: 9pt; color: #555; }
+    .sig-date { margin-top: 8px; font-size: 9pt; color: #444; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-title">BUSINESS LOAN OFFER LETTER</div>
+  <div class="doc-sub">Term Loan Facility</div>
+  <div class="doc-ref">
+    <span>Reference: <strong>{{agreementRef}}</strong></span>
+    <span>Date of Issue: <strong>{{issueDate}}</strong></span>
+  </div>
+
+  <h2>1. Borrower Details</h2>
+  <div class="grid">
+    <div class="cell"><div class="lbl">Company Name</div><div class="val">{{borrower.companyName}}</div></div>
+    <div class="cell"><div class="lbl">Reg. Number</div><div class="val">{{borrower.reg}}</div></div>
+    <div class="cell"><div class="lbl">Registered Address</div><div class="val">{{borrower.address}}</div></div>
+    <div class="cell"><div class="lbl">Business Type</div><div class="val">{{borrower.type}}</div></div>
+    <div class="cell"><div class="lbl">Authorised Signatory</div><div class="val">{{borrower.signatory}}</div></div>
+    <div class="cell"><div class="lbl">Designation</div><div class="val">{{borrower.designation}}</div></div>
+  </div>
+
+  <h2>2. Loan Terms</h2>
+  <div class="grid">
+    <div class="cell"><div class="lbl">Loan Amount</div><div class="val">{{loan.currency}} {{loan.principal}}</div></div>
+    <div class="cell"><div class="lbl">Interest Rate (p.a.)</div><div class="val">{{loan.interestRate}}%</div></div>
+    <div class="cell"><div class="lbl">Tenure</div><div class="val">{{loan.tenure}} months</div></div>
+    <div class="cell"><div class="lbl">Monthly Instalment</div><div class="val">{{loan.currency}} {{loan.instalment}}</div></div>
+    <div class="cell"><div class="lbl">Loan Purpose</div><div class="val">{{loan.purpose}}</div></div>
+    <div class="cell"><div class="lbl">Disbursement Date</div><div class="val">{{loan.disbursementDate}}</div></div>
+    <div class="cell"><div class="lbl">First Repayment Date</div><div class="val">{{loan.firstRepayment}}</div></div>
+    <div class="cell"><div class="lbl">Maturity Date</div><div class="val">{{loan.maturityDate}}</div></div>
+  </div>
+
+  <h2>3. Key Conditions</h2>
+  <div class="terms">
+    <md>
+## Repayment
+
+Repayments of **{{loan.currency}} {{loan.instalment}}** per month shall be made by GIRO from the Borrower's designated account. The Borrower shall ensure sufficient funds are available on each due date.
+
+## Prepayment
+
+The Borrower may prepay the outstanding balance in full, subject to **30 calendar days' prior written notice** to the Bank. A prepayment fee may apply during the initial lock-in period.
+
+## Security
+
+This facility is granted on the basis of a **personal guarantee** provided by **{{borrower.signatory}}**, {{borrower.designation}} of the Borrower.
+
+## Governing Law
+
+This Offer Letter is governed by and construed in accordance with the laws of **{{govLaw}}**. Any disputes shall be subject to the exclusive jurisdiction of the courts of **{{govLaw}}**.
+    </md>
+  </div>
+
+  <h2>4. Acceptance</h2>
+  <div class="terms">
+    <md>
+By signing below, the Borrower confirms acceptance of this Offer Letter and agrees to be bound by the terms and conditions set out herein. This offer is valid for **14 days** from the date of issue.
+    </md>
+  </div>
+
+  <div class="signoff">
+    <div class="sig-blk">
+      <div class="sig-role">Signed for and on behalf of<br /><strong>{{borrower.companyName}}</strong> (Borrower)</div>
+      <div class="sig-name">{{borrower.signatory}}</div>
+      <div class="sig-ttl">{{borrower.designation}}</div>
+      <div class="sig-date">Date: ___________________________</div>
+    </div>
+    <div class="sig-blk">
+      <div class="sig-role">Signed for and on behalf of<br /><strong>{{bank.name}}</strong> (Bank)</div>
+      <div class="sig-name">{{bank.officer}}</div>
+      <div class="sig-ttl">{{bank.officerTitle}}</div>
+      <div class="sig-date">Date: ___________________________</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+const P2_DATA = {
+  "agreementRef": "BLA-2026-03-00847",
+  "issueDate": "24 March 2026",
+  "govLaw": "Singapore",
+  "borrower": {
+    "companyName": "Meridian Tech Solutions Pte. Ltd.",
+    "reg": "202212345K",
+    "address": "18 Cross Street, #08-04, Singapore 048423",
+    "type": "Private Limited Company",
+    "signatory": "Tan Wei Liang",
+    "designation": "Director"
+  },
+  "loan": {
+    "currency": "SGD",
+    "principal": "500,000.00",
+    "interestRate": "4.75",
+    "tenure": "12",
+    "instalment": "42,837.15",
+    "purpose": "Working Capital & Equipment Procurement",
+    "disbursementDate": "1 April 2026",
+    "firstRepayment": "1 May 2026",
+    "maturityDate": "1 April 2027"
+  },
+  "bank": {
+    "name": "Demo Bank Ltd.",
+    "officer": "Sarah Lim Mei Ling",
+    "officerTitle": "Senior Relationship Manager"
+  }
+};
+
+// ── Presets registry ─────────────────────────────────────────────────────────
+const PRESETS = [
+  { label: '1 — Hello World',       template: P1_TEMPLATE, data: P1_DATA },
+  { label: '2 — Loan Offer Letter', template: P2_TEMPLATE, data: P2_DATA }
+];
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const editorEl      = document.getElementById('editor');
+const previewEl     = document.getElementById('preview');
+const sampleDataEl  = document.getElementById('sampleData');
+const sampleDataErr = document.getElementById('sampleDataError');
+const cssEditorEl   = document.getElementById('cssEditor');
+const generateBtn   = document.getElementById('generateBtn');
+const errorMsgEl    = document.getElementById('error-msg');
+const presetSelect  = document.getElementById('presetSelect');
+const splitPane     = document.getElementById('split-pane');
+const leftPane      = document.getElementById('left-pane');
+const dragHandle    = document.getElementById('drag-handle');
+
+// ── CodeJar initialisation ────────────────────────────────────────────────────
+function highlight(el) {
+  el.innerHTML = Prism.highlight(
+    el.textContent,
+    Prism.languages.hybridTemplate,
+    'hybridTemplate'
+  );
+}
+
+const jar = CodeJar(editorEl, highlight, { tab: '  ' });
+
+function loadPreset(index) {
+  const p = PRESETS[index];
+  jar.updateCode(p.template);
+  sampleDataEl.value = JSON.stringify(p.data, null, 2);
+  document.getElementById('editor-scroll').scrollTop  = 0;
+  document.getElementById('preview-scroll').scrollTop = 0;
+  updatePreview();
+}
+
+loadPreset(0);
+
+presetSelect.addEventListener('change', () => loadPreset(+presetSelect.value));
+
+// ── Preview pipeline ──────────────────────────────────────────────────────────
+let previewTimer = null;
+
+jar.onUpdate(() => {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(updatePreview, 300);
+});
+
+sampleDataEl.addEventListener('input', () => {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(updatePreview, 300);
+});
+
+function parseSampleData() {
+  try {
+    const data = JSON.parse(sampleDataEl.value || '{}');
+    sampleDataErr.classList.remove('visible');
+    return data;
+  } catch {
+    sampleDataErr.classList.add('visible');
+    return {};
+  }
+}
+
+function substituteTokens(text, data) {
+  return text.replace(/\{\{([^{}#/]+?)\}\}/g, (match, key) => {
+    const parts = key.trim().split('.');
+    let val = data;
+    for (const p of parts) {
+      if (val == null || typeof val !== 'object') return match;
+      val = val[p];
+    }
+    return val != null ? String(val) : match;
+  });
+}
+
+function parseSegments(source) {
+  const segments = [];
+  const re = /<md>([\s\S]*?)<\/md>/gi;
+  let last = 0, m;
+  while ((m = re.exec(source)) !== null) {
+    if (m.index > last) segments.push({ type: 'html', text: source.slice(last, m.index) });
+    segments.push({ type: 'md', text: m[1] });
+    last = m.index + m[0].length;
+  }
+  if (last < source.length) segments.push({ type: 'html', text: source.slice(last) });
+  return segments;
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function updatePreview() {
+  const source   = jar.toString();
+  const data     = parseSampleData();
+  const segments = parseSegments(source);
+
+  previewEl.innerHTML = segments.map(seg => {
+    if (seg.type === 'html') {
+      const trimmed = seg.text.trim();
+      if (!trimmed) return '';
+      return `<div class="seg-html"><div class="seg-label">HTML</div><pre>${escapeHtml(trimmed)}</pre></div>`;
+    } else {
+      const substituted = substituteTokens(seg.text, data);
+      return `<div class="seg-md">${marked.parse(substituted)}</div>`;
+    }
+  }).join('');
+}
+
+// ── PDF export ────────────────────────────────────────────────────────────────
+function toBase64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+async function generatePdf() {
+  generateBtn.disabled = true;
+  generateBtn.classList.add('loading');
+  hideError();
+
+  try {
+    const templateEncoded = toBase64(jar.toString());
+    const cssContent      = cssEditorEl.value.trim();
+    const cssEncoded      = cssContent ? toBase64(cssContent) : undefined;
+    const data            = parseSampleData();
+
+    const payload = { templateEncoded };
+    if (cssEncoded) payload.cssEncoded = cssEncoded;
+    if (Object.keys(data).length > 0) payload.docPropertiesJsonData = data;
+
+    const response = await fetch('/api/content/submit', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => `HTTP ${response.status}`);
+      throw new Error(errText || `HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+  } catch (err) {
+    showError(err.message || 'PDF generation failed');
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.classList.remove('loading');
+  }
+}
+
+generateBtn.addEventListener('click', generatePdf);
+
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    generatePdf();
+  }
+});
+
+function showError(msg) {
+  errorMsgEl.textContent = msg;
+  errorMsgEl.classList.add('visible');
+  setTimeout(hideError, 6000);
+}
+function hideError() {
+  errorMsgEl.classList.remove('visible');
+}
+
+// ── Sidebar panel toggle ──────────────────────────────────────────────────────
+window.togglePanel = function(header) {
+  header.closest('.side-panel').classList.toggle('collapsed');
+};
+
+// ── Drag-to-resize ────────────────────────────────────────────────────────────
+let dragging = false;
+let startX, startW;
+
+dragHandle.addEventListener('mousedown', e => {
+  dragging = true;
+  startX   = e.clientX;
+  startW   = leftPane.getBoundingClientRect().width;
+  dragHandle.classList.add('dragging');
+  document.body.style.cursor     = 'col-resize';
+  document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const totalW = splitPane.getBoundingClientRect().width;
+  const newW   = Math.max(80, Math.min(totalW - 85, startW + (e.clientX - startX)));
+  leftPane.style.width = newW + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  if (!dragging) return;
+  dragging = false;
+  dragHandle.classList.remove('dragging');
+  document.body.style.cursor     = '';
+  document.body.style.userSelect = '';
+});
+</script>
+</body>
+</html>

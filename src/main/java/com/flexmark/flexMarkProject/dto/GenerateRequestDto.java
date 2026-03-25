@@ -88,9 +88,11 @@ public class GenerateRequestDto implements Serializable{
     /**
      * Dynamic data map for Handlebars templating (optional).
      * Contains server-side trusted data.
+     * Mutually exclusive with {@link #documentType}: when both are supplied,
+     * this field takes precedence and DB resolution is skipped.
      */
     @Schema(
-        description = "Dynamic data object for Handlebars template variable substitution. Supports nested objects and arrays for loops. Data is trusted and not sanitized.",
+        description = "Dynamic data object for Handlebars template variable substitution. Supports nested objects and arrays for loops. Data is trusted and not sanitized. Mutually exclusive with documentType — this field takes precedence when both are provided.",
         example = """
             {
               "title": "Sales Report",
@@ -104,5 +106,32 @@ public class GenerateRequestDto implements Serializable{
             """,
         requiredMode = Schema.RequiredMode.NOT_REQUIRED
     )
-    private Map<String,Object> docPropertiesJsonData;
+    private Map<String, Object> docPropertiesJsonData;
+
+    /**
+     * Named document type for database-driven data resolution (optional, poc profile only).
+     * When provided and {@link #docPropertiesJsonData} is absent, the server resolves the
+     * Handlebars context from the H2 database using the registered queries for this type.
+     * Example: {@code "business_loan_report"}.
+     */
+    @Schema(
+        description = "Named document type for DB-driven data resolution (requires poc profile). " +
+                      "Mutually exclusive with docPropertiesJsonData — docPropertiesJsonData takes precedence when both are provided. " +
+                      "Example: \"business_loan_report\"",
+        example = "business_loan_report",
+        requiredMode = Schema.RequiredMode.NOT_REQUIRED
+    )
+    private String documentType;
+
+    /**
+     * Optional runtime parameters passed to the DB queries for the given {@link #documentType}.
+     * These override the static parameter defaults defined in the registry.
+     * Example: {@code {"agreementId": 2}} to select a different loan agreement.
+     */
+    @Schema(
+        description = "Optional runtime parameters for DB query resolution. Override static defaults in the query registry. Used with documentType.",
+        example = "{\"agreementId\": 2}",
+        requiredMode = Schema.RequiredMode.NOT_REQUIRED
+    )
+    private Map<String, Object> queryParams;
 }

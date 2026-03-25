@@ -1,0 +1,68 @@
+{
+  "agreementRef": "BLA-2026-03-00847",
+  "issueDate": "24 March 2026",
+
+  "borrower": {
+    "companyName": "Meridian Tech Solutions Pte. Ltd.",
+    "registrationNumber": "202212345K",
+    "registeredAddress": "18 Cross Street, #08-04 China Square Central, Singapore 048423",
+    "businessType": "Private Limited Company",
+    "authorisedSignatory": "Tan Wei Liang",
+    "signatoryDesignation": "Director",
+    "email": "weilian.tan@meridiantech.com.sg",
+    "contactNumber": "+65 6221 8800"
+  },
+
+  "loan": {
+    "currency": "SGD",
+    "principalFormatted": "500,000.00",
+    "interestRate": "4.75",
+    "tenureMonths": "12",
+    "monthlyInstalmentFormatted": "42,837.15",
+    "purpose": "Working Capital & Equipment Procurement",
+    "type": "Fixed Rate Term Loan",
+    "disbursementDate": "1 April 2026",
+    "firstRepaymentDate": "1 May 2026",
+    "maturityDate": "1 April 2027",
+    "processingFeeFormatted": "2,500.00",
+    "debitAccountNumber": "601-XXXXXX-001",
+    "prepaymentFeeRate": "1.50",
+    "prepaymentLockInMonths": "6",
+    "totalPrincipalFormatted": "500,000.00",
+    "totalInterestFormatted": "14,045.80",
+    "totalPayableFormatted": "514,045.80"
+  },
+
+  "schedule": [
+    { "installmentNo": "1",  "dueDate": "1 May 2026",  "openingBalance": "500,000.00", "principal": "40,858.98", "interest": "1,978.17", "instalment": "42,837.15", "closingBalance": "459,141.02" },
+    { "installmentNo": "2",  "dueDate": "1 Jun 2026",  "openingBalance": "459,141.02", "principal": "41,020.44", "interest": "1,816.71", "instalment": "42,837.15", "closingBalance": "418,120.58" },
+    { "installmentNo": "3",  "dueDate": "1 Jul 2026",  "openingBalance": "418,120.58", "principal": "41,182.53", "interest": "1,654.62", "instalment": "42,837.15", "closingBalance": "376,938.05" },
+    { "installmentNo": "4",  "dueDate": "1 Aug 2026",  "openingBalance": "376,938.05", "principal": "41,345.27", "interest": "1,491.88", "instalment": "42,837.15", "closingBalance": "335,592.78" },
+    { "installmentNo": "5",  "dueDate": "1 Sep 2026",  "openingBalance": "335,592.78", "principal": "41,508.65", "interest": "1,328.50", "instalment": "42,837.15", "closingBalance": "294,084.13" },
+    { "installmentNo": "6",  "dueDate": "1 Oct 2026",  "openingBalance": "294,084.13", "principal": "41,672.68", "interest": "1,164.47", "instalment": "42,837.15", "closingBalance": "252,411.45" },
+    { "installmentNo": "7",  "dueDate": "1 Nov 2026",  "openingBalance": "252,411.45", "principal": "41,837.36", "interest": "999.79",  "instalment": "42,837.15", "closingBalance": "210,574.09" },
+    { "installmentNo": "8",  "dueDate": "1 Dec 2026",  "openingBalance": "210,574.09", "principal": "42,002.70", "interest": "834.45",  "instalment": "42,837.15", "closingBalance": "168,571.39" },
+    { "installmentNo": "9",  "dueDate": "1 Jan 2027",  "openingBalance": "168,571.39", "principal": "42,168.69", "interest": "668.46",  "instalment": "42,837.15", "closingBalance": "126,402.70" },
+    { "installmentNo": "10", "dueDate": "1 Feb 2027",  "openingBalance": "126,402.70", "principal": "42,335.34", "interest": "501.81",  "instalment": "42,837.15", "closingBalance": "84,067.36"  },
+    { "installmentNo": "11", "dueDate": "1 Mar 2027",  "openingBalance": "84,067.36",  "principal": "42,502.65", "interest": "334.50",  "instalment": "42,837.15", "closingBalance": "41,564.71"  },
+    { "installmentNo": "12", "dueDate": "1 Apr 2027",  "openingBalance": "41,564.71",  "principal": "41,564.71", "interest": "164.62",  "instalment": "41,729.33", "closingBalance": "0.00"        }
+  ],
+
+  "security": {
+    "type": "Personal Guarantee",
+    "description": "Unlimited personal guarantee provided by Tan Wei Liang (NRIC: SXXXXXXXA), Director of the Borrower"
+  },
+
+  "covenants": {
+    "minDSCR": "1.25"
+  },
+
+  "governingLaw": "Singapore",
+  "jurisdiction": "Singapore",
+
+  "bank": {
+    "name": "Demo Bank Ltd.",
+    "officerName": "Sarah Lim Mei Ling",
+    "officerTitle": "Senior Relationship Manager, Business Banking"
+  }
+}

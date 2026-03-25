@@ -224,19 +224,19 @@ flowchart TD
     GetData --> Handlebars
 
     Handlebars --> MergeData[Merge docPropertiesJsonData<br/>into Handlebars Template]
-    MergeData --> ExpandLoops[Expand Loops & Conditionals<br/>Handlebars #each, #if, etc.]
+    MergeData --> ExpandLoops[Expand Loops &amp; Conditionals<br/>Handlebars #each, #if, etc.]
     ExpandLoops --> HybridOutput[Output: Hybrid HTML/Markdown<br/>Template structure + Raw Markdown]
 
     HybridOutput --> DOMParse[Stage 4: DOM Processing<br/>Parse with Jsoup]
-    DOMParse --> FindMDTags[Locate &lt;md&gt; tags<br/>in Document]
+    DOMParse --> FindMDTags["Locate &lt;md&gt; tags<br/>in Document"]
     FindMDTags --> RenderMarkdown[Render Markdown to HTML<br/>via Flexmark Parser]
-    RenderMarkdown --> ReplaceInPlace[Replace &lt;md&gt; nodes<br/>with rendered HTML in-place]
+    RenderMarkdown --> ReplaceInPlace["Replace &lt;md&gt; nodes<br/>with rendered HTML in-place"]
     ReplaceInPlace --> PureHTML[Output: Pure HTML DOM<br/>All Markdown converted]
 
     PureHTML --> Assembly[Stage 5: DOM Assembly]
-    Assembly --> InjectCSS[Inject CSS into &lt;head&gt;<br/>from cssStr]
-    InjectCSS --> InjectFooter[Inject Footer into &lt;body&gt;<br/>prepend footerStr]
-    InjectFooter --> InjectHeader[Inject Header into &lt;body&gt;<br/>prepend headerStr]
+    Assembly --> InjectCSS["Inject CSS into &lt;head&gt;<br/>from cssStr"]
+    InjectCSS --> InjectFooter["Inject Footer into &lt;body&gt;<br/>prepend footerStr"]
+    InjectFooter --> InjectHeader["Inject Header into &lt;body&gt;<br/>prepend headerStr"]
     InjectHeader --> EnforceXHTML[Enforce XHTML Compliance<br/>Auto-close tags, escape entities]
     EnforceXHTML --> ValidXHTML[Output: Valid XHTML DOM<br/>Data URIs preserved]
 

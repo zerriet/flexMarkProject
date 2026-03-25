@@ -93,6 +93,12 @@
             <version>5.0.5</version>
         </dependency>
 
+		<!-- JDBC for DB-driven data injection (poc profile) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-jdbc</artifactId>
+		</dependency>
+
 		<!-- Swagger/OpenAPI Documentation -->
 		<dependency>
 			<groupId>org.springdoc</groupId>

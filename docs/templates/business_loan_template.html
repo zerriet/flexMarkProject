@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11pt;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 0;
+    }
+
+    .page {
+      padding: 48px 56px;
+    }
+
+    /* ── Header ── */
+    .doc-header {
+      border-bottom: 2px solid #1a1a1a;
+      padding-bottom: 16px;
+      margin-bottom: 28px;
+    }
+
+    .doc-title {
+      font-size: 18pt;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      margin: 0 0 4px 0;
+    }
+
+    .doc-subtitle {
+      font-size: 10pt;
+      color: #555;
+      margin: 0;
+    }
+
+    .doc-ref-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5pt;
+      color: #444;
+      margin-top: 10px;
+    }
+
+    /* ── Section headings ── */
+    h2 {
+      font-size: 11.5pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 4px;
+      margin-top: 28px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Key-value detail blocks ── */
+    .detail-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      border: 1px solid #ccc;
+      margin-bottom: 16px;
+    }
+
+    .detail-item {
+      width: 50%;
+      box-sizing: border-box;
+      padding: 8px 14px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .detail-item:nth-child(odd) {
+      border-right: 1px solid #eee;
+    }
+
+    .detail-label {
+      font-size: 8.5pt;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 2px;
+    }
+
+    .detail-value {
+      font-size: 10.5pt;
+      font-weight: bold;
+    }
+
+    /* ── Loan summary highlight bar ── */
+    .summary-bar {
+      display: flex;
+      justify-content: space-between;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      border-radius: 2px;
+    }
+
+    .summary-bar-item {
+      text-align: center;
+    }
+
+    .summary-bar-item .label {
+      font-size: 8.5pt;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .summary-bar-item .value {
+      font-size: 14pt;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
+    /* ── Repayment table ── */
+    table.repayment {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+      margin-bottom: 16px;
+    }
+
+    table.repayment thead tr {
+      background: #1a1a1a;
+      color: #fff;
+      /*
+       * display:table-header-group causes the <thead> to repeat on every page
+       * when the table spans a page break. Supported by iText7 html2pdf and WeasyPrint.
+       */
+      display: table-header-group;
+    }
+
+    table.repayment thead th {
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: bold;
+      font-size: 9pt;
+      letter-spacing: 0.3px;
+    }
+
+    table.repayment tbody tr {
+      /*
+       * Prevent a single data row from being split mid-row across two pages.
+       * page-break-inside is the CSS2 syntax (iText7); break-inside is CSS3 (WeasyPrint).
+       * Both are included for engine compatibility.
+       */
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    table.repayment tbody tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    table.repayment tbody td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    table.repayment tfoot tr {
+      background: #efefef;
+      font-weight: bold;
+      /* Keep the totals row visually attached to the last data row where possible */
+      page-break-before: avoid;
+      break-before: avoid;
+    }
+
+    table.repayment tfoot td {
+      padding: 8px 10px;
+      border-top: 2px solid #ccc;
+    }
+
+    /* ── Markdown content (terms) ── */
+    .terms-body p {
+      font-size: 10pt;
+      line-height: 1.65;
+      margin: 0 0 10px 0;
+    }
+
+    .terms-body ol, .terms-body ul {
+      font-size: 10pt;
+      line-height: 1.65;
+      padding-left: 20px;
+      margin: 0 0 10px 0;
+    }
+
+    .terms-body li {
+      margin-bottom: 4px;
+    }
+
+    .terms-body strong {
+      font-weight: bold;
+    }
+
+    /* ── Sign-off block ── */
+    .signoff-grid {
+      display: flex;
+      gap: 40px;
+      margin-top: 20px;
+    }
+
+    .signoff-block {
+      flex: 1;
+      border-top: 1px solid #1a1a1a;
+      padding-top: 10px;
+    }
+
+    .signoff-label {
+      font-size: 9pt;
+      color: #555;
+      margin-bottom: 28px;
+    }
+
+    .signoff-name {
+      font-size: 10pt;
+      font-weight: bold;
+      border-top: 1px solid #aaa;
+      padding-top: 6px;
+    }
+
+    .signoff-title {
+      font-size: 9pt;
+      color: #555;
+    }
+
+    .signoff-date-row {
+      margin-top: 8px;
+      font-size: 9pt;
+      color: #444;
+    }
+
+    /* ── Footer ── */
+    .doc-footer {
+      border-top: 1px solid #ccc;
+      margin-top: 36px;
+      padding-top: 10px;
+      font-size: 8.5pt;
+      color: #888;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /*
+     * PAGE NUMBER STRATEGY
+     * ─────────────────────────────────────────────────────────────────────
+     * Option A — CSS counters (used here for WeasyPrint/browser preview):
+     *   The .page-num span below uses ::before with content: counter(page).
+     *   WeasyPrint supports this natively. iText7 html2pdf has partial support.
+     *
+     * Option B — iText7 Java event handler (recommended for production):
+     *   Remove the .page-num span from the footer HTML and implement a
+     *   PdfDocumentEvent handler on IEventType.END_PAGE in your Java service.
+     *   This gives reliable "Page X of Y" on every page regardless of content flow.
+     *   See: com.itextpdf.kernel.events.PdfDocumentEvent
+     *
+     * The template is written to support both: the span is present for preview,
+     * and can be stripped by the Java service before rendering if using Option B.
+     * ─────────────────────────────────────────────────────────────────────
+     */
+    .page-num::before {
+      content: "Page " counter(page) " of " counter(pages);
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══ DOCUMENT HEADER ══════════════════════════════════════════════ -->
+  <div class="doc-header">
+    <div class="doc-title">BUSINESS LOAN AGREEMENT</div>
+    <div class="doc-subtitle">Term Loan Facility</div>
+    <div class="doc-ref-row">
+      <span>Agreement Reference: <strong>{{agreementRef}}</strong></span>
+      <span>Date of Issue: <strong>{{issueDate}}</strong></span>
+    </div>
+  </div>
+
+
+  <!-- ══ SECTION 1 — BORROWER DETAILS ════════════════════════════════ -->
+  <h2>1. Borrower Details</h2>
+
+  <div class="detail-grid">
+    <div class="detail-item">
+      <div class="detail-label">Company Name</div>
+      <div class="detail-value">{{borrower.companyName}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Registration Number</div>
+      <div class="detail-value">{{borrower.registrationNumber}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Registered Address</div>
+      <div class="detail-value">{{borrower.registeredAddress}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Business Type</div>
+      <div class="detail-value">{{borrower.businessType}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Authorised Signatory</div>
+      <div class="detail-value">{{borrower.authorisedSignatory}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Designation</div>
+      <div class="detail-value">{{borrower.signatoryDesignation}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Contact Email</div>
+      <div class="detail-value">{{borrower.email}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Contact Number</div>
+      <div class="detail-value">{{borrower.contactNumber}}</div>
+    </div>
+  </div>
+
+
+  <!-- ══ SECTION 2 — LOAN SUMMARY ════════════════════════════════════ -->
+  <h2>2. Loan Summary</h2>
+
+  <div class="summary-bar">
+    <div class="summary-bar-item">
+      <div class="label">Loan Amount</div>
+      <div class="value">{{loan.currency}} {{loan.principalFormatted}}</div>
+    </div>
+    <div class="summary-bar-item">
+      <div class="label">Interest Rate (p.a.)</div>
+      <div class="value">{{loan.interestRate}}%</div>
+    </div>
+    <div class="summary-bar-item">
+      <div class="label">Tenure</div>
+      <div class="value">{{loan.tenureMonths}} months</div>
+    </div>
+    <div class="summary-bar-item">
+      <div class="label">Monthly Instalment</div>
+      <div class="value">{{loan.currency}} {{loan.monthlyInstalmentFormatted}}</div>
+    </div>
+  </div>
+
+  <div class="detail-grid">
+    <div class="detail-item">
+      <div class="detail-label">Loan Purpose</div>
+      <div class="detail-value">{{loan.purpose}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Loan Type</div>
+      <div class="detail-value">{{loan.type}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Disbursement Date</div>
+      <div class="detail-value">{{loan.disbursementDate}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">First Repayment Date</div>
+      <div class="detail-value">{{loan.firstRepaymentDate}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Maturity Date</div>
+      <div class="detail-value">{{loan.maturityDate}}</div>
+    </div>
+    <div class="detail-item">
+      <div class="detail-label">Processing Fee</div>
+      <div class="detail-value">{{loan.currency}} {{loan.processingFeeFormatted}}</div>
+    </div>
+  </div>
+
+
+  <!-- ══ SECTION 3 — REPAYMENT SCHEDULE ══════════════════════════════ -->
+  <h2>3. Repayment Schedule</h2>
+
+  <table class="repayment">
+    <thead>
+      <tr>
+        <th>No.</th>
+        <th>Due Date</th>
+        <th>Opening Balance ({{loan.currency}})</th>
+        <th>Principal ({{loan.currency}})</th>
+        <th>Interest ({{loan.currency}})</th>
+        <th>Instalment ({{loan.currency}})</th>
+        <th>Closing Balance ({{loan.currency}})</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each schedule}}
+      <tr>
+        <td>{{installmentNo}}</td>
+        <td>{{dueDate}}</td>
+        <td>{{openingBalance}}</td>
+        <td>{{principal}}</td>
+        <td>{{interest}}</td>
+        <td>{{instalment}}</td>
+        <td>{{closingBalance}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3">Total</td>
+        <td>{{loan.totalPrincipalFormatted}}</td>
+        <td>{{loan.totalInterestFormatted}}</td>
+        <td>{{loan.totalPayableFormatted}}</td>
+        <td>—</td>
+      </tr>
+    </tfoot>
+  </table>
+
+
+  <!-- ══ SECTION 4 — TERMS & CONDITIONS ══════════════════════════════ -->
+  <h2>4. Terms &amp; Conditions</h2>
+
+  <div class="terms-body">
+    <md>
+## 4.1 Drawdown
+
+The Borrower shall draw down the full loan amount on the **Disbursement Date** as specified in Section 2. Partial drawdown is not permitted under this facility unless separately agreed in writing by the Bank.
+
+## 4.2 Repayment
+
+Repayments shall be made on the dates set out in the Repayment Schedule in Section 3. All payments are to be made in **{{loan.currency}}** by GIRO deduction from account number **{{loan.debitAccountNumber}}** maintained with the Bank. The Borrower shall ensure sufficient funds are available in the designated account on each due date.
+
+## 4.3 Prepayment
+
+The Borrower may prepay the outstanding principal in full or in part, subject to giving **30 calendar days' prior written notice** to the Bank. A prepayment fee of **{{loan.prepaymentFeeRate}}% of the prepaid amount** shall apply if prepayment is made within the first **{{loan.prepaymentLockInMonths}} months** of the loan tenure.
+
+## 4.4 Default and Events of Default
+
+The following shall constitute Events of Default:
+
+1. Failure to make any payment when due and such failure continues for **7 business days** after the due date
+2. Material breach of any representation, warranty, or covenant under this Agreement
+3. Insolvency, winding-up proceedings, or appointment of a receiver over the Borrower's assets
+4. Any cross-default on other material financial indebtedness of the Borrower
+
+Upon an Event of Default, the Bank reserves the right to declare the entire outstanding balance immediately due and payable, and to exercise all rights available under applicable law.
+
+## 4.5 Security
+
+This facility is granted on the basis of the following security:
+
+- **{{security.type}}**: {{security.description}}
+- The Borrower undertakes not to encumber, transfer, or dispose of the secured assets without prior written consent from the Bank.
+
+## 4.6 Covenants
+
+Throughout the tenure of this facility, the Borrower shall:
+
+- Maintain a **debt service coverage ratio (DSCR) of not less than {{covenants.minDSCR}}x** measured semi-annually
+- Provide audited financial statements within **90 days** of each financial year end
+- Promptly notify the Bank of any material adverse change in its financial condition or business operations
+
+## 4.7 Governing Law
+
+This Agreement is governed by and construed in accordance with the laws of **{{governingLaw}}**. Any dispute arising out of or in connection with this Agreement shall be subject to the exclusive jurisdiction of the courts of **{{jurisdiction}}**.
+    </md>
+  </div>
+
+
+  <!-- ══ SECTION 5 — SIGN-OFF BLOCK ═══════════════════════════════════ -->
+  <h2>5. Execution</h2>
+
+  <div class="terms-body">
+    <md>
+By signing below, the parties confirm they have read, understood, and agree to be bound by the terms of this Business Loan Agreement.
+    </md>
+  </div>
+
+  <div class="signoff-grid">
+
+    <div class="signoff-block">
+      <div class="signoff-label">Signed for and on behalf of<br /><strong>{{borrower.companyName}}</strong> (Borrower)</div>
+      <div class="signoff-name">{{borrower.authorisedSignatory}}</div>
+      <div class="signoff-title">{{borrower.signatoryDesignation}}</div>
+      <div class="signoff-date-row">Date: ___________________________</div>
+      <div class="signoff-date-row" style="margin-top:6px;">Company Stamp:</div>
+    </div>
+
+    <div class="signoff-block">
+      <div class="signoff-label">Signed for and on behalf of<br /><strong>{{bank.name}}</strong> (Bank)</div>
+      <div class="signoff-name">{{bank.officerName}}</div>
+      <div class="signoff-title">{{bank.officerTitle}}</div>
+      <div class="signoff-date-row">Date: ___________________________</div>
+      <div class="signoff-date-row" style="margin-top:6px;">Bank Stamp:</div>
+    </div>
+
+  </div>
+
+  <!-- ══ DOCUMENT FOOTER ══════════════════════════════════════════════ -->
+  <div class="doc-footer">
+    <span>Agreement Ref: {{agreementRef}}</span>
+    <span>This document is computer-generated. Authorised signatures required for validity.</span>
+    <span class="page-num"></span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,5 +1,6 @@
 package com.flexmark.flexMarkProject.controller;
 
+import com.flexmark.flexMarkProject.db.DataContextResolver;
 import com.flexmark.flexMarkProject.dto.GenerateRequestDto;
 import com.flexmark.flexMarkProject.service.MarkdownService;
 
@@ -13,6 +14,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.jetbrains.annotations.NotNull;
+import java.util.Map;
+import org.springframework.util.StringUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -41,12 +44,11 @@ public class InitialController {
 
     private final MarkdownService markdownService;
 
-    /**
-     * Constructor Injection for the MarkdownService.
-     * @param markdownService The service responsible for processing and generating PDF documents.
-     */
-    public InitialController(MarkdownService markdownService) {
+    private final DataContextResolver dataContextResolver;
+
+    public InitialController(MarkdownService markdownService, DataContextResolver dataContextResolver) {
         this.markdownService = markdownService;
+        this.dataContextResolver = dataContextResolver;
     }
 
     /**
@@ -204,6 +206,16 @@ public class InitialController {
         )
         @Valid @RequestBody GenerateRequestDto data
     ) {
+        // DB-driven data resolution: populate docPropertiesJsonData from the database
+        // when a documentType is specified and no inline JSON data was supplied.
+        if (StringUtils.hasText(data.getDocumentType())
+                && data.getDocPropertiesJsonData() == null) {
+            Map<String, Object> runtimeParams = data.getQueryParams() != null
+                ? data.getQueryParams()
+                : java.util.Map.of();
+            data.setDocPropertiesJsonData(dataContextResolver.resolve(data.getDocumentType(), runtimeParams));
+        }
+
         Resource generatedPdf = markdownService.generateDocument(data);
 
         return ResponseEntity.ok()
