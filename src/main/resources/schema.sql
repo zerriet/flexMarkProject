@@ -1,6 +1,13 @@
 -- Schema for FlexMark POC: business loan document data
 -- Designed in PostgreSQL-compatible SQL (H2 PostgreSQL mode)
 
+-- Drop tables in reverse dependency order before recreating
+DROP TABLE IF EXISTS bank_officers CASCADE;
+DROP TABLE IF EXISTS loan_security CASCADE;
+DROP TABLE IF EXISTS repayment_schedule CASCADE;
+DROP TABLE IF EXISTS borrowers CASCADE;
+DROP TABLE IF EXISTS loan_agreements CASCADE;
+
 CREATE TABLE IF NOT EXISTS loan_agreements (
     id                      BIGINT PRIMARY KEY,
     agreement_ref           VARCHAR(50)  NOT NULL,

@@ -2,6 +2,109 @@
 
 ---
 
+## [Unreleased] — 2026-03-27
+
+### Enhancement: Air-Gap / Offline Frontend (CDN Libraries Inlined)
+
+Removes all CDN dependencies from `src/main/resources/static/index.html` so the editor works in fully isolated (air-gapped) environments with no outbound internet access.
+
+**Previously** the page fetched three libraries from `https://esm.sh` on every load:
+
+| Library | Version | Role |
+|---|---|---|
+| `codejar` | 4.3.0 | Template editor (left pane) |
+| `prismjs` | 1.30.0 | Syntax highlighting (`{{...}}`, `<md>` tokens) |
+| `marked` | 17.0.5 | Markdown → HTML in the preview pane |
+
+**After this change** all three are inlined directly in `index.html`:
+- `prismjs` and `marked` inlined as `<script>` blocks (IIFE/UMD builds) before the module script — they expose `window.Prism` and `window.marked` as globals
+- `codejar` source inlined at the top of the `<script type="module">` block (ESM export keyword removed; function is used directly)
+- The three `import … from 'https://esm.sh/…'` lines removed
+
+`index.html` remains the only file required to run the frontend. File size increased from ~32 KB to ~145 KB.
+
+#### Security notes
+- **Supply-chain risk reduced**: libraries are no longer fetched from an external CDN at runtime; a compromised CDN can no longer affect the running app
+- **Version freeze**: library versions are now fixed — security patches require manually re-inlining updated versions
+- **Pre-existing**: `marked.parse()` output is set as `innerHTML` in the preview pane without sanitisation; acceptable for this localhost developer tool but should be revisited if the app is ever exposed to multiple users
+
+---
+
+### Enhancement: PostgreSQL Local Profile
+
+Adds a dedicated Spring `local` profile backed by a real PostgreSQL instance, allowing the application to run against a local `docforge` database instead of the in-process H2 store.
+
+#### Modified / New
+| File | Change |
+|---|---|
+| `pom.xml` | Added `org.postgresql:postgresql` driver at `runtime` scope |
+| `src/main/resources/application-local.properties` | New Spring profile `local`: `jdbc:postgresql://localhost:5432/docforge`, `spring.sql.init.mode=always`, H2 console disabled, Hikari pool capped at 5 connections |
+
+Run with: `mvn spring-boot:run -Dspring-boot.run.profiles=local`
+
+---
+
+### Enhancement: SQL Idempotency & Schema Reset
+
+Makes startup SQL safe to re-run without manual intervention.
+
+| File | Change |
+|---|---|
+| `src/main/resources/schema.sql` | Added `DROP TABLE IF EXISTS … CASCADE` for all 5 tables before `CREATE TABLE IF NOT EXISTS`, enabling a clean schema reset on each startup |
+| `src/main/resources/data.sql` | Added `ON CONFLICT DO NOTHING` to all 5 `INSERT` statements — seed data is now idempotent |
+
+---
+
+### Enhancement: Data Source Selector in Editor UI
+
+Replaces the manual Document Type text field with a first-class toolbar dropdown, making DB-driven mode discoverable without needing to know a registered type string.
+
+Changes to `src/main/resources/static/index.html`:
+- Added a **Data Source** `<select>` dropdown to the toolbar, styled identically to the preset selector
+- Options: `"Sample Data"` (default / empty value) and `"DB: business_loan_report"`
+- When DB mode is active, the Sample Data side panel is visually dimmed (`opacity: 0.35`, pointer-events disabled) via `.side-panel.db-mode` CSS class toggled by the `change` event
+- `generatePdf()` sends `documentType` from the dropdown when a DB source is selected; falls back to `docPropertiesJsonData` from the sample data panel otherwise
+
+---
+
+### Bug Fix: Document Settings Drawer — CSS Colour Corrections
+
+Four CSS colour values in `src/main/resources/static/index.html` were documented as fixed in `devlog.md` but were not applied to the file during the IntelliJ Claude plugin session. Applied manually.
+
+| Selector | Property | Old value | New value |
+|---|---|---|---|
+| `.ds-import-label` | `color` | `#3a3a58` | `var(--text-muted)` |
+| `.ds-textarea::placeholder` | `color` | `#2a2a44` | `#45455a` |
+| `.payload-toggle` | `color` | `#3a3a58` | `var(--text-muted)` |
+| `.payload-pre` | `color` | `#3a3a58` | `var(--text-muted)` |
+
+All four values were near-black, effectively invisible against the dark Catppuccin Mocha drawer backgrounds. The import zone label, textarea placeholders, payload inspector toggle, and payload preview text are now legible.
+
+---
+
+### Bug Fix: DB Data Source — SQL Column Alias Mismatch
+
+`DocumentTypeRegistry.java` used descriptive column aliases that did not match the variable names in the Preset 2 (Loan Offer Letter) template. When the **DB: business_loan_report** data source was selected, 10 template tokens resolved to blank — producing a PDF with empty borrower details, loan figures, and bank officer name.
+
+**Root cause:** The SQL `AS` aliases in `buildBusinessLoanQueries()` used verbose names (e.g. `"registrationNumber"`, `"principalFormatted"`) while the template referenced the shorter names used in the frontend sample JSON (e.g. `{{borrower.reg}}`, `{{loan.principal}}`).
+
+**Fix:** Updated SQL aliases in `DocumentTypeRegistry.java` to exactly match the template variable names. No schema, seed data, or template changes required.
+
+| Query | Column | Old alias | New alias |
+|---|---|---|---|
+| `borrower` | `registration_number` | `registrationNumber` | `reg` |
+| `borrower` | `registered_address` | `registeredAddress` | `address` |
+| `borrower` | `business_type` | `businessType` | `type` |
+| `borrower` | `authorised_signatory` | `authorisedSignatory` | `signatory` |
+| `borrower` | `signatory_designation` | `signatoryDesignation` | `designation` |
+| `loan` | `principal_formatted` | `principalFormatted` | `principal` |
+| `loan` | `tenure_months` | `tenureMonths` | `tenure` |
+| `loan` | `monthly_instalment_fmt` | `monthlyInstalmentFormatted` | `instalment` |
+| `loan` | `first_repayment_date` | `firstRepaymentDate` | `firstRepayment` |
+| `bank` | `officer_name` | `officerName` | `officer` |
+
+---
+
 ## [Unreleased] — 2026-03-25
 
 ### Feature 2: Database-Driven Data Injection (POC)

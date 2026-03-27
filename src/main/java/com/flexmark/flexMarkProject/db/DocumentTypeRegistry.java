@@ -64,16 +64,17 @@ public class DocumentTypeRegistry {
                 Map.of(AGREEMENT_ID_PARAM, 1)
             ),
 
-            // borrower object → {{borrower.companyName}}, {{borrower.authorisedSignatory}}, etc.
+            // borrower object → {{borrower.companyName}}, {{borrower.reg}}, {{borrower.address}},
+            //                   {{borrower.type}}, {{borrower.signatory}}, {{borrower.designation}}
             new QueryDefinition(
                 "borrower",
                 """
                 SELECT company_name          AS "companyName",
-                       registration_number   AS "registrationNumber",
-                       registered_address    AS "registeredAddress",
-                       business_type        AS "businessType",
-                       authorised_signatory  AS "authorisedSignatory",
-                       signatory_designation AS "signatoryDesignation",
+                       registration_number   AS "reg",
+                       registered_address    AS "address",
+                       business_type         AS "type",
+                       authorised_signatory  AS "signatory",
+                       signatory_designation AS "designation",
                        email,
                        contact_number        AS "contactNumber"
                 FROM borrowers
@@ -83,19 +84,21 @@ public class DocumentTypeRegistry {
                 Map.of(AGREEMENT_ID_PARAM, 1)
             ),
 
-            // loan object → {{loan.currency}}, {{loan.principalFormatted}}, etc.
+            // loan object → {{loan.currency}}, {{loan.principal}}, {{loan.interestRate}},
+            //               {{loan.tenure}}, {{loan.instalment}}, {{loan.purpose}},
+            //               {{loan.disbursementDate}}, {{loan.firstRepayment}}, {{loan.maturityDate}}
             new QueryDefinition(
                 "loan",
                 """
                 SELECT currency,
-                       principal_formatted    AS "principalFormatted",
+                       principal_formatted    AS "principal",
                        interest_rate          AS "interestRate",
-                       tenure_months          AS "tenureMonths",
-                       monthly_instalment_fmt AS "monthlyInstalmentFormatted",
+                       tenure_months          AS "tenure",
+                       monthly_instalment_fmt AS "instalment",
                        purpose,
                        loan_type              AS "type",
                        disbursement_date      AS "disbursementDate",
-                       first_repayment_date   AS "firstRepaymentDate",
+                       first_repayment_date   AS "firstRepayment",
                        maturity_date          AS "maturityDate",
                        processing_fee_fmt     AS "processingFeeFormatted",
                        debit_account_number   AS "debitAccountNumber",
@@ -130,12 +133,12 @@ public class DocumentTypeRegistry {
                 Map.of(AGREEMENT_ID_PARAM, 1)
             ),
 
-            // bank object → {{bank.name}}, {{bank.officerName}}, {{bank.officerTitle}}
+            // bank object → {{bank.name}}, {{bank.officer}}, {{bank.officerTitle}}
             new QueryDefinition(
                 "bank",
                 """
                 SELECT bank_name    AS "name",
-                       officer_name AS "officerName",
+                       officer_name AS "officer",
                        officer_title AS "officerTitle"
                 FROM bank_officers
                 WHERE loan_agreement_id = :agreementId

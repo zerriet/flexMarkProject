@@ -29,7 +29,13 @@ POST /api/content/submit
 Content-Type: application/json
 ```
 
+### Browser Editor
+
+A built-in split-pane editor is served at `http://localhost:8080/`. It requires no separate toolchain — open it in any browser after starting the app. The editor provides syntax-highlighted template editing, a live Markdown preview, sample data and CSS panels, a preset selector, and a **Data Source** dropdown for switching between inline sample data and DB-backed document types (e.g. `business_loan_report`). Click **Generate PDF** or press `Cmd/Ctrl+Enter` to call the API and open the result.
+
 ### Request Example
+
+**Option A — inline data:**
 ```json
 {
   "templateEncoded": "base64EncodedTemplate",
@@ -44,6 +50,15 @@ Content-Type: application/json
     ]
   }
 }
+```
+
+**Option B — DB-driven (registered document type):**
+```json
+{
+  "templateEncoded": "base64EncodedTemplate",
+  "documentType": "business_loan_report"
+}
+```
 ```
 
 **Note:** Images should be embedded directly in the HTML using data URIs:
@@ -340,7 +355,9 @@ The service follows a strict **6-stage pipeline** to ensure formatting complianc
 | `cssEncoded` | String | No | Base64-encoded CSS styles |
 | `headerEncoded` | String | No | Base64-encoded HTML header. May contain `<img>` tags with data URI images embedded in `src` attributes. |
 | `footerEncoded` | String | No | Base64-encoded HTML footer. May contain `<img>` tags with data URI images embedded in `src` attributes. |
-| `docPropertiesJsonData` | Map<String, Object> | No | Dynamic data for Handlebars templating (server-side, trusted source). Defaults to empty map if null. |
+| `docPropertiesJsonData` | Map<String, Object> | No | Inline data for Handlebars templating. Takes precedence over `documentType` when both are supplied. Defaults to empty map if null. |
+| `documentType` | String | No | Registered document type key (e.g. `business_loan_report`). When set and `docPropertiesJsonData` is absent, the server resolves Handlebars context from the database via `DataContextResolver`. |
+| `queryParams` | Map<String, Object> | No | Runtime query parameters merged over static params when using `documentType`. Ignored when `docPropertiesJsonData` is present. |
 
 > **Note:** The service uses Jakarta Bean Validation. Invalid requests (missing or blank `templateEncoded`) will automatically return a 400 Bad Request with validation error details before reaching the service layer. This provides faster feedback and clearer error messages.
 
@@ -1287,10 +1304,13 @@ The FlexMark PDF Generator has **comprehensive test coverage** across all critic
 
 **Test Suite Summary:**
 ```
-✅ 51 Total Tests - All Passing
+✅ 66 Total Tests - All Passing
    ├─ 19 Unit Tests (MarkdownService)
    ├─ 16 Integration Tests (InitialController)
    ├─ 15 Security Tests (SecureDataUriResourceRetriever)
+   ├─  5 Unit Tests (DocumentTypeRegistry)
+   ├─  7 Integration Tests (DataContextResolver)
+   ├─  3 Integration Tests (InitialControllerDbIntegration)
    └─  1 Context Load Test (Application)
 ```
 
@@ -1301,7 +1321,7 @@ mvn test
 
 **Expected Output:**
 ```
-[INFO] Tests run: 51, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 66, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 
@@ -1551,7 +1571,7 @@ void testPngDataUri() throws Exception {
 mvn test
 
 # Ensure all tests pass
-# Expected: Tests run: 51, Failures: 0, Errors: 0, Skipped: 0
+# Expected: Tests run: 66, Failures: 0, Errors: 0, Skipped: 0
 
 # Run application
 mvn spring-boot:run
@@ -1588,6 +1608,41 @@ mvn clean install
 - Each test file has a class-level JavaDoc explaining its purpose
 
 ## Recent Updates
+
+### 2026-03-27: Air-Gap / Offline Frontend
+- Inlined `codejar` 4.3.0, `prismjs` 1.30.0, and `marked` 17.0.5 directly into `index.html` — all CDN (`esm.sh`) imports removed
+- Editor now works in fully air-gapped / secure environments with no outbound internet access
+- `index.html` remains the only required frontend file (~145 KB, up from ~32 KB)
+- Supply-chain risk reduced: libraries are frozen at audited versions and no longer fetched at runtime
+
+### 2026-03-27: PostgreSQL Local Profile
+- New `application-local.properties` Spring profile (`local`) connecting to `jdbc:postgresql://localhost:5432/docforge`
+- Added `org.postgresql:postgresql` driver dependency at `runtime` scope
+- Run with: `mvn spring-boot:run -Dspring-boot.run.profiles=local`
+
+### 2026-03-27: SQL Idempotency & Schema Reset
+- `schema.sql`: added `DROP TABLE IF EXISTS … CASCADE` for all 5 tables before `CREATE TABLE IF NOT EXISTS` — safe to re-run on every startup
+- `data.sql`: added `ON CONFLICT DO NOTHING` to all 5 `INSERT` statements — seed data is idempotent
+
+### 2026-03-27: Data Source Selector in Editor UI
+- Replaced the manual Document Type text field with a **Data Source** toolbar dropdown (`"Sample Data"` / `"DB: business_loan_report"`)
+- Sample Data side panel dims and disables automatically when DB mode is selected
+- `generatePdf()` sends `documentType` when a DB source is chosen; falls back to inline sample data otherwise
+
+### 2026-03-25: Database-Driven Data Injection (POC)
+- New `documentType` and `queryParams` fields on `GenerateRequestDto`; `docPropertiesJsonData` takes precedence when both are supplied
+- New DB domain package: `QueryDefinition`, `DocumentTypeRegistry`, `DataContextResolver`
+- Registered type: `"business_loan_report"` (6 SQL queries via `NamedParameterJdbcTemplate`)
+- H2 in PostgreSQL compatibility mode (`application-poc.properties`); schema + seed data in `schema.sql` / `data.sql`
+- 15 new tests (unit + Spring integration); total test count: **66** (up from 51)
+
+### 2026-03-25: Split-Pane Editor with Live Preview
+- Browser-based authoring tool at `http://localhost:8080/` — no Node server or build toolchain required
+- Left pane: CodeJar editor with custom Prism syntax highlighting for `{{...}}` tokens and `<md>` tags
+- Right pane: segment-based live preview — HTML segments shown as source, `<md>` segments rendered via `marked`
+- Toolbar: Preset selector, Data Source dropdown, Generate PDF button (`Cmd/Ctrl+Enter`)
+- Sample Data and CSS collapsible panels; drag-to-resize split pane
+- Unicode-safe Base64 encoding for non-ASCII content
 
 ### v6.2: Comprehensive Test Suite
 - **Test Coverage:**

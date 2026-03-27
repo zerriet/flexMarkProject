@@ -344,16 +344,19 @@
     /* ── Doc Settings Drawer ── */
     :root {
       --drawer-expanded: 260px;
-      --drawer-rail: 44px;
-      --drawer-hidden: 0px;
+      --drawer-rail:      44px;
+      --drawer-hidden:     0px;
       --drawer-transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    /* app-body wraps split-pane + sidebar in a row so the drawer sits to the right */
     #app-body {
       display: flex;
       flex: 1;
       min-height: 0;
       overflow: hidden;
     }
+
     #main-col {
       display: flex;
       flex-direction: column;
@@ -361,6 +364,8 @@
       min-width: 0;
       overflow: hidden;
     }
+
+    /* Drawer button in toolbar */
     #docSettingsBtn {
       background: transparent;
       border: 1px solid var(--panel-border);
@@ -377,14 +382,22 @@
       white-space: nowrap;
     }
     #docSettingsBtn:hover { background: #2a2a3e; color: var(--text); }
-    #docSettingsBtn.drawer-open { background: #1e2a40; border-color: var(--accent); color: var(--accent); }
+    #docSettingsBtn.drawer-open {
+      background: #1e2a40;
+      border-color: var(--accent);
+      color: var(--accent);
+    }
     .ds-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--panel-border); flex-shrink: 0;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--panel-border);
+      flex-shrink: 0;
       transition: background 0.2s;
     }
     .ds-dot.set   { background: #a6e3a1; }
     .ds-dot.error { background: var(--error); }
+
+    /* Drawer container */
     #doc-drawer {
       width: var(--drawer-expanded);
       min-width: var(--drawer-expanded);
@@ -394,7 +407,9 @@
       background: #13131f;
       border-left: 1px solid var(--panel-border);
       overflow: hidden;
-      transition: width var(--drawer-transition), min-width var(--drawer-transition), max-width var(--drawer-transition);
+      transition: width var(--drawer-transition),
+                  min-width var(--drawer-transition),
+                  max-width var(--drawer-transition);
       flex-shrink: 0;
     }
     #doc-drawer.rail {
@@ -408,121 +423,236 @@
       max-width: var(--drawer-hidden);
       border-left-color: transparent;
     }
+
+    /* Drawer header */
     .drawer-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 12px; height: 36px; background: #0f0f1b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      height: 36px;
+      background: #0f0f1b;
       border-bottom: 1px solid var(--panel-border);
-      flex-shrink: 0; overflow: hidden; white-space: nowrap;
+      flex-shrink: 0;
+      overflow: hidden;
+      white-space: nowrap;
     }
     .drawer-header-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 1px; color: var(--accent); flex: 1;
-      overflow: hidden; text-overflow: ellipsis;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
     }
     .drawer-chevron {
-      background: none; border: none; color: var(--text-muted);
-      cursor: pointer; font-size: 13px; padding: 2px 4px; flex-shrink: 0;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 4px;
+      line-height: 1;
+      flex-shrink: 0;
       transition: color 0.15s, transform 0.22s;
     }
     .drawer-chevron:hover { color: var(--text); }
     #doc-drawer.rail .drawer-chevron { transform: rotate(180deg); }
+
+    /* Rail icons column */
     .drawer-rail-col {
-      display: none; flex-direction: column; align-items: center;
-      padding: 10px 0; gap: 14px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0;
+      gap: 14px;
     }
     #doc-drawer.rail .drawer-rail-col { display: flex; }
-    #doc-drawer.rail .drawer-body { display: none; }
+    #doc-drawer.rail .drawer-body     { display: none; }
+
     .rail-icon {
-      display: flex; flex-direction: column; align-items: center;
-      gap: 4px; cursor: pointer; opacity: 0.5; transition: opacity 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.15s;
     }
     .rail-icon:hover { opacity: 0.9; }
     .rail-icon.set   { opacity: 1; }
     .rail-icon-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--panel-border); transition: background 0.2s;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--panel-border);
+      transition: background 0.2s;
     }
     .rail-icon.set   .rail-icon-dot { background: #a6e3a1; }
     .rail-icon.error .rail-icon-dot { background: var(--error); }
     .rail-icon-label {
-      font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px;
-      color: var(--text-muted); writing-mode: vertical-rl;
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      writing-mode: vertical-rl;
       transform: rotate(180deg);
     }
+
+    /* Drawer body */
     .drawer-body {
-      flex: 1; overflow-y: auto; padding: 14px 12px;
-      display: flex; flex-direction: column; gap: 18px;
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
     .drawer-body::-webkit-scrollbar { width: 4px; }
     .drawer-body::-webkit-scrollbar-track { background: transparent; }
     .drawer-body::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 2px; }
+
+    /* Section within drawer */
     .ds-section { display: flex; flex-direction: column; gap: 8px; }
+
     .ds-section-label {
-      font-size: 11px; font-weight: 600; color: var(--text-muted);
-      display: flex; align-items: center; gap: 7px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 7px;
     }
     .ds-section-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--panel-border); flex-shrink: 0; transition: background 0.2s;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--panel-border);
+      flex-shrink: 0;
+      transition: background 0.2s;
     }
     .ds-section-dot.set   { background: #a6e3a1; }
     .ds-section-dot.error { background: var(--error); }
-    .ds-hint  { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
-    .ds-hint.error   { color: var(--error); }
-    .ds-hint.success { color: #a6e3a1; }
-    .ds-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; font-style: italic; }
+
+    .ds-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .ds-hint.error  { color: var(--error); }
+    .ds-hint.success{ color: #a6e3a1; }
+
+    /* User-friendly description text */
+    .ds-desc {
+      font-size: 11px;
+      color: #585870;
+      line-height: 1.5;
+      font-style: italic;
+    }
+
+    /* Import zone */
     .ds-import-zone {
-      background: #0d0d1c; border: 1px dashed #2a2a48;
-      border-radius: 6px; padding: 8px 10px;
-      display: flex; flex-direction: column; gap: 5px;
+      background: #0d0d1c;
+      border: 1px dashed #2a2a48;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
     }
     .ds-import-label {
-      font-size: 10px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.6px; color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #3a3a58;
     }
+
     .ds-textarea {
-      width: 100%; background: #090912; border: 1px solid #252540;
-      border-radius: 4px; color: var(--accent);
-      font-family: "Fira Code", Consolas, monospace;
-      font-size: 10px; padding: 6px 8px; resize: none; outline: none;
-      line-height: 1.5; transition: border-color 0.15s;
+      width: 100%;
+      background: #090912;
+      border: 1px solid #252540;
+      border-radius: 4px;
+      color: var(--accent);
+      font-family: 'Fira Code', Consolas, monospace;
+      font-size: 10px;
+      padding: 6px 8px;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+      transition: border-color 0.15s;
     }
-    .ds-textarea::placeholder { color: #45455a; }
+    .ds-textarea::placeholder { color: #2a2a44; }
     .ds-textarea:focus  { border-color: #4455aa; }
     .ds-textarea.valid  { border-color: #2a5a3a; color: #a6e3a1; }
     .ds-textarea.invalid{ border-color: #5a2a2a; color: var(--error); }
+
+    /* Drawer action buttons */
     .ds-actions { display: flex; gap: 6px; flex-wrap: wrap; }
     .ds-btn {
-      font-size: 11px; padding: 4px 10px; border-radius: 4px;
-      cursor: pointer; border: 1px solid var(--panel-border);
-      background: #1a1a2e; color: var(--text-muted);
-      transition: all 0.15s; white-space: nowrap;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid var(--panel-border);
+      background: #1a1a2e;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      white-space: nowrap;
     }
-    .ds-btn:hover         { background: #252540; color: var(--text); }
-    .ds-btn.primary       { background: #1a2a40; border-color: #336699; color: var(--accent); }
+    .ds-btn:hover { background: #252540; color: var(--text); }
+    .ds-btn.primary {
+      background: #1a2a40;
+      border-color: #336699;
+      color: var(--accent);
+    }
     .ds-btn.primary:hover { background: #223355; }
-    .ds-btn.danger        { color: #7a4444; border-color: #3a2020; }
-    .ds-btn.danger:hover  { background: #2a1818; color: var(--error); }
-    .ds-divider { height: 1px; background: var(--panel-border); opacity: 0.4; }
+    .ds-btn.danger  { color: #7a4444; border-color: #3a2020; }
+    .ds-btn.danger:hover { background: #2a1818; color: var(--error); }
+
+    .ds-divider {
+      height: 1px;
+      background: var(--panel-border);
+      opacity: 0.4;
+    }
+
+    /* Payload footer */
     .drawer-footer {
-      padding: 10px 12px; border-top: 1px solid var(--panel-border);
-      background: #0f0f1b; flex-shrink: 0;
+      padding: 10px 12px;
+      border-top: 1px solid var(--panel-border);
+      background: #0f0f1b;
+      flex-shrink: 0;
     }
     .payload-toggle {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px; color: var(--text-muted); cursor: pointer;
-      user-select: none; transition: color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #3a3a58;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s;
     }
     .payload-toggle:hover { color: var(--text-muted); }
     .payload-arrow { font-size: 9px; transition: transform 0.2s; }
     .payload-arrow.open { transform: rotate(90deg); }
     .payload-pre {
-      margin-top: 8px; background: #090912; border: 1px solid #1e1e30;
-      border-radius: 4px; padding: 8px;
-      font-size: 9.5px; font-family: "Fira Code", Consolas, monospace;
-      color: var(--text-muted); white-space: pre-wrap; word-break: break-all;
-      line-height: 1.5; max-height: 120px; overflow-y: auto;
+      margin-top: 8px;
+      background: #090912;
+      border: 1px solid #1e1e30;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 9.5px;
+      font-family: 'Fira Code', Consolas, monospace;
+      color: #3a3a58;
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+      max-height: 120px;
+      overflow-y: auto;
     }
+
+    /* Flash animation for the editor when template is applied */
     @keyframes editorFlash {
       0%   { background: #0d2a1a; }
       100% { background: var(--cm-bg); }
@@ -563,154 +693,156 @@
 
   <!-- ── App body: main col + doc drawer ── -->
   <div id="app-body">
-    <div id="main-col">
+  <div id="main-col">
 
-      <!-- ── Split pane ── -->
-      <div id="split-pane">
+  <!-- ── Split pane ── -->
+  <div id="split-pane">
 
-        <div id="left-pane" class="pane-col">
-          <div class="pane-header">Template Editor</div>
-          <div id="editor-scroll">
-            <div id="editor" spellcheck="false"></div>
-          </div>
-        </div>
-
-        <div id="drag-handle"></div>
-
-        <div id="right-pane" class="pane-col">
-          <div class="pane-header">Preview</div>
-          <div id="preview-scroll"><div id="preview"></div></div>
-        </div>
-
-      </div><!-- /split-pane -->
-
-      <!-- ── Sidebar (unchanged) ── -->
-      <div id="sidebar">
-
-        <div class="side-panel">
-          <div class="panel-header" onclick="togglePanel(this)">
-            <span class="panel-toggle">▼</span>Sample Data (JSON)
-          </div>
-          <div class="panel-body">
-            <textarea id="sampleData" spellcheck="false"></textarea>
-            <div class="panel-error" id="sampleDataError">&#9888; Invalid JSON — using empty object</div>
-          </div>
-        </div>
-
-        <div class="side-panel">
-          <div class="panel-header" onclick="togglePanel(this)">
-            <span class="panel-toggle">▼</span>CSS
-          </div>
-          <div class="panel-body">
-            <textarea id="cssEditor" spellcheck="false"
-                      placeholder="/* Custom CSS injected into the PDF */"></textarea>
-          </div>
-        </div>
-
-      </div><!-- /sidebar -->
-
-    </div><!-- /main-col -->
-
-    <!-- ── Doc Settings Drawer ── -->
-    <div id="doc-drawer">
-
-      <!-- Drawer header (expanded state) -->
-      <div class="drawer-header">
-        <span class="drawer-header-title">Document settings</span>
-        <button class="drawer-chevron" onclick="cycleDrawer()" title="Collapse">&#8250;</button>
+    <div id="left-pane" class="pane-col">
+      <div class="pane-header">Template Editor</div>
+      <div id="editor-scroll">
+        <div id="editor" spellcheck="false"></div>
       </div>
+    </div>
 
-      <!-- Rail icons (rail state) -->
-      <div class="drawer-rail-col">
-        <div class="rail-icon" id="rail-template" onclick="expandDrawer()" title="Template import">
-          <div class="rail-icon-dot"></div>
-          <span class="rail-icon-label">Template</span>
-        </div>
-        <div class="rail-icon" id="rail-header" onclick="expandDrawer()" title="Header">
-          <div class="rail-icon-dot"></div>
-          <span class="rail-icon-label">Header</span>
-        </div>
-        <div class="rail-icon" id="rail-footer" onclick="expandDrawer()" title="Footer">
-          <div class="rail-icon-dot"></div>
-          <span class="rail-icon-label">Footer</span>
-        </div>
+    <div id="drag-handle"></div>
+
+    <div id="right-pane" class="pane-col">
+      <div class="pane-header">Preview</div>
+      <div id="preview-scroll">
+        <div id="preview"></div>
       </div>
+    </div>
 
-      <!-- Drawer body (expanded state) -->
-      <div class="drawer-body">
+  </div><!-- /split-pane -->
 
-        <!-- Section 1: Template -->
-        <div class="ds-section">
-          <div class="ds-section-label">
-            <span class="ds-section-dot" id="dot-template"></span>
-            Template
-          </div>
-          <p class="ds-desc">Import a pre-built template from your team, or export the current template to share.</p>
-          <div class="ds-import-zone">
-            <div class="ds-import-label">Import from code</div>
-            <textarea class="ds-textarea" id="tpl-b64-input" rows="3"
-              placeholder="Paste your template code here to load it into the editor&#8230;"
-              oninput="handleTemplateB64(this.value)"></textarea>
-            <div class="ds-hint" id="tpl-hint">Paste a code string from your team or system</div>
-          </div>
-          <div class="ds-actions">
-            <button class="ds-btn primary" onclick="applyTemplateB64()">Load into editor</button>
-            <button class="ds-btn" onclick="exportTemplateB64()">Export current</button>
-            <button class="ds-btn danger" onclick="clearTemplateB64()">Clear</button>
-          </div>
+  <!-- ── Sidebar ── -->
+  <div id="sidebar">
+
+    <div class="side-panel">
+      <div class="panel-header" onclick="togglePanel(this)">
+        <span class="panel-toggle">▼</span>Sample Data (JSON)
+      </div>
+      <div class="panel-body">
+        <textarea id="sampleData" spellcheck="false"></textarea>
+        <div class="panel-error" id="sampleDataError">&#9888; Invalid JSON — using empty object</div>
+      </div>
+    </div>
+
+    <div class="side-panel">
+      <div class="panel-header" onclick="togglePanel(this)">
+        <span class="panel-toggle">▼</span>CSS
+      </div>
+      <div class="panel-body">
+        <textarea id="cssEditor" spellcheck="false"
+                  placeholder="/* Custom CSS injected into the PDF */"></textarea>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  </div><!-- /main-col -->
+
+  <!-- ── Doc Settings Drawer ── -->
+  <div id="doc-drawer">
+
+    <!-- Drawer header (shown when expanded) -->
+    <div class="drawer-header">
+      <span class="drawer-header-title">Document settings</span>
+      <button class="drawer-chevron" onclick="cycleDrawer()" title="Collapse">&#8250;</button>
+    </div>
+
+    <!-- Rail icons (shown when collapsed to icon rail) -->
+    <div class="drawer-rail-col">
+      <div class="rail-icon" id="rail-template" onclick="expandDrawer()" title="Template import">
+        <div class="rail-icon-dot"></div>
+        <span class="rail-icon-label">Template</span>
+      </div>
+      <div class="rail-icon" id="rail-header" onclick="expandDrawer()" title="Header">
+        <div class="rail-icon-dot"></div>
+        <span class="rail-icon-label">Header</span>
+      </div>
+      <div class="rail-icon" id="rail-footer" onclick="expandDrawer()" title="Footer">
+        <div class="rail-icon-dot"></div>
+        <span class="rail-icon-label">Footer</span>
+      </div>
+    </div>
+
+    <!-- Drawer body (shown when expanded) -->
+    <div class="drawer-body">
+
+      <!-- Section 1: Template import -->
+      <div class="ds-section">
+        <div class="ds-section-label">
+          <span class="ds-section-dot" id="dot-template"></span>
+          Template
+        </div>
+        <p class="ds-desc">Import a pre-built template from your team, or export the current template to share.</p>
+
+        <div class="ds-import-zone">
+          <div class="ds-import-label">Import from code</div>
+          <textarea class="ds-textarea" id="tpl-b64-input" rows="3"
+            placeholder="Paste your template code here to load it into the editor…"
+            oninput="handleTemplateB64(this.value)"></textarea>
+          <div class="ds-hint" id="tpl-hint">Paste a code string from your team or system</div>
         </div>
 
-        <div class="ds-divider"></div>
-
-        <!-- Section 2: Header -->
-        <div class="ds-section">
-          <div class="ds-section-label">
-            <span class="ds-section-dot" id="dot-header"></span>
-            Page header
-          </div>
-          <p class="ds-desc">Add a header that appears at the top of every page &#8212; typically your company logo and name.</p>
-          <textarea class="ds-textarea" id="header-b64" rows="3"
-            placeholder="Paste your header code here&#8230;"
-            oninput="updateFieldDot('dot-header','rail-header','btn-dot-header',this.value,'header-hint')"></textarea>
-          <div class="ds-hint" id="header-hint">No header set &#8212; PDF will have no top branding</div>
-        </div>
-
-        <div class="ds-divider"></div>
-
-        <!-- Section 3: Footer -->
-        <div class="ds-section">
-          <div class="ds-section-label">
-            <span class="ds-section-dot" id="dot-footer"></span>
-            Page footer
-          </div>
-          <p class="ds-desc">Add a footer that appears at the bottom of every page &#8212; page numbers, disclaimers, or your address.</p>
-          <textarea class="ds-textarea" id="footer-b64" rows="3"
-            placeholder="Paste your footer code here&#8230;"
-            oninput="updateFieldDot('dot-footer','rail-footer','btn-dot-footer',this.value,'footer-hint')"></textarea>
-          <div class="ds-hint" id="footer-hint">No footer set &#8212; PDF will have no bottom branding</div>
-        </div>
-
-      </div><!-- /drawer-body -->
-
-      <!-- Payload inspector (for technical users) -->
-      <div class="drawer-footer">
-        <div class="payload-toggle" onclick="togglePayload()">
-          <span class="payload-arrow" id="payload-arrow">&#8250;</span>
-          View full request (advanced)
-        </div>
-        <div id="payload-block" style="display:none">
-          <pre class="payload-pre" id="payload-pre"></pre>
-          <div class="ds-actions" style="margin-top:6px">
-            <button class="ds-btn primary" onclick="copyPayload()">Copy JSON</button>
-          </div>
+        <div class="ds-actions">
+          <button class="ds-btn primary" onclick="applyTemplateB64()">Load into editor</button>
+          <button class="ds-btn" onclick="exportTemplateB64()">Export current</button>
+          <button class="ds-btn danger" onclick="clearTemplateB64()">Clear</button>
         </div>
       </div>
 
-    </div><!-- /doc-drawer -->
+      <div class="ds-divider"></div>
+
+      <!-- Section 2: Header -->
+      <div class="ds-section">
+        <div class="ds-section-label">
+          <span class="ds-section-dot" id="dot-header"></span>
+          Page header
+        </div>
+        <p class="ds-desc">Add a header that appears at the top of every page — typically includes your company logo and name.</p>
+        <textarea class="ds-textarea" id="header-b64" rows="3"
+          placeholder="Paste your header code here…"
+          oninput="updateFieldDot('dot-header', 'rail-header', 'btn-dot-header', this.value, 'header-hint')"></textarea>
+        <div class="ds-hint" id="header-hint">No header set — PDF will have no top branding</div>
+      </div>
+
+      <div class="ds-divider"></div>
+
+      <!-- Section 3: Footer -->
+      <div class="ds-section">
+        <div class="ds-section-label">
+          <span class="ds-section-dot" id="dot-footer"></span>
+          Page footer
+        </div>
+        <p class="ds-desc">Add a footer that appears at the bottom of every page — page numbers, disclaimers, or your company address.</p>
+        <textarea class="ds-textarea" id="footer-b64" rows="3"
+          placeholder="Paste your footer code here…"
+          oninput="updateFieldDot('dot-footer', 'rail-footer', 'btn-dot-footer', this.value, 'footer-hint')"></textarea>
+        <div class="ds-hint" id="footer-hint">No footer set — PDF will have no bottom branding</div>
+      </div>
+
+    </div><!-- /drawer-body -->
+
+    <!-- Payload inspector (for technical users) -->
+    <div class="drawer-footer">
+      <div class="payload-toggle" onclick="togglePayload()" title="See the full request that will be sent to generate the PDF">
+        <span class="payload-arrow" id="payload-arrow">&#8250;</span>
+        View full request (advanced)
+      </div>
+      <div id="payload-block" style="display:none">
+        <pre class="payload-pre" id="payload-pre"></pre>
+        <div class="ds-actions" style="margin-top:6px">
+          <button class="ds-btn primary" onclick="copyPayload()">Copy JSON</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /doc-drawer -->
 
   </div><!-- /app-body -->
-
-</div><!-- /app -->
 
 <!-- Prism.js (inlined — no CDN required) -->
 <script>
@@ -3556,6 +3688,166 @@ function toBase64(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
 
+// ── Doc Settings Drawer ───────────────────────────────────────────────────────
+// States: 'expanded' | 'rail' | 'hidden'
+// Cycle: expanded → rail → hidden → expanded
+let drawerState = 'hidden';
+const drawer    = document.getElementById('doc-drawer');
+const dsBtn     = document.getElementById('docSettingsBtn');
+
+function setDrawerState(state) {
+  drawerState = state;
+  drawer.classList.remove('rail', 'hidden');
+  if (state === 'rail')     drawer.classList.add('rail');
+  if (state === 'hidden')   drawer.classList.add('hidden');
+  dsBtn.classList.toggle('drawer-open', state === 'expanded');
+  const chevron = drawer.querySelector('.drawer-chevron');
+  if (chevron) chevron.title = state === 'expanded' ? 'Collapse to icons' : 'Expand';
+  updatePayloadIfOpen();
+}
+
+window.cycleDrawer = function() {
+  if (drawerState === 'expanded') setDrawerState('rail');
+  else if (drawerState === 'rail') setDrawerState('hidden');
+  else setDrawerState('expanded');
+};
+
+window.expandDrawer = function() { setDrawerState('expanded'); };
+
+setDrawerState('hidden');
+
+// ── Base64 helpers ────────────────────────────────────────────────────────────
+function safeB64Decode(str) {
+  try {
+    const clean = str.replace(/\s/g, '');
+    if (!clean) return null;
+    const padded = clean + '===='.slice(0, (4 - clean.length % 4) % 4);
+    return decodeURIComponent(escape(atob(padded)));
+  } catch {
+    try { return atob(str.replace(/\s/g, '')); } catch { return null; }
+  }
+}
+
+function safeB64Encode(str) {
+  try { return btoa(unescape(encodeURIComponent(str))); } catch { return btoa(str); }
+}
+
+// ── Template import/export ───────────────────────────────────────────────────
+let pendingDecoded = '';
+
+window.handleTemplateB64 = function(val) {
+  const input = document.getElementById('tpl-b64-input');
+  const hint  = document.getElementById('tpl-hint');
+  const dot   = document.getElementById('dot-template');
+  const rail  = document.getElementById('rail-template');
+  const bdot  = document.getElementById('btn-dot-template');
+
+  const clean = val.replace(/\s/g, '');
+  if (!clean) {
+    input.className = 'ds-textarea';
+    hint.className = 'ds-hint';
+    hint.textContent = 'Paste a code string from your team or system';
+    dot.className = 'ds-section-dot';
+    rail.className = 'rail-icon';
+    bdot.className = 'ds-dot';
+    pendingDecoded = '';
+    return;
+  }
+
+  const decoded = safeB64Decode(val);
+  if (decoded === null) {
+    input.className = 'ds-textarea invalid';
+    hint.className = 'ds-hint error';
+    hint.textContent = '&#9888; That doesn\'t look right — double-check the code and try again';
+    dot.className = 'ds-section-dot error';
+    rail.className = 'rail-icon error';
+    bdot.className = 'ds-dot error';
+    pendingDecoded = '';
+  } else {
+    input.className = 'ds-textarea valid';
+    hint.className = 'ds-hint success';
+    hint.textContent = '&#10003; Code looks good (' + decoded.length + ' characters) — click "Load into editor" to apply';
+    dot.className = 'ds-section-dot set';
+    rail.className = 'rail-icon set';
+    bdot.className = 'ds-dot set';
+    pendingDecoded = decoded;
+  }
+};
+
+window.applyTemplateB64 = function() {
+  if (!pendingDecoded) {
+    const val = document.getElementById('tpl-b64-input').value;
+    if (!val.trim()) return;
+    const decoded = safeB64Decode(val);
+    if (!decoded) return;
+    pendingDecoded = decoded;
+  }
+  jar.updateCode(pendingDecoded);
+  updatePreview();
+  // Flash the editor scroll area to signal the change
+  const scroll = document.getElementById('editor-scroll');
+  scroll.classList.remove('editor-flash');
+  void scroll.offsetWidth;
+  scroll.classList.add('editor-flash');
+  setTimeout(() => scroll.classList.remove('editor-flash'), 500);
+  updatePayloadIfOpen();
+};
+
+window.exportTemplateB64 = function() {
+  const code = jar.toString();
+  if (!code.trim()) return;
+  const encoded = safeB64Encode(code);
+  const input = document.getElementById('tpl-b64-input');
+  input.value = encoded;
+  handleTemplateB64(encoded);
+  updatePayloadIfOpen();
+};
+
+window.clearTemplateB64 = function() {
+  document.getElementById('tpl-b64-input').value = '';
+  handleTemplateB64('');
+  updatePayloadIfOpen();
+};
+
+// ── Header / footer dot updates ───────────────────────────────────────────────
+window.updateFieldDot = function(dotId, railId, btnDotId, val, hintId) {
+  const dot   = document.getElementById(dotId);
+  const rail  = document.getElementById(railId);
+  const bdot  = document.getElementById(btnDotId);
+  const hint  = document.getElementById(hintId);
+  const clean = val.replace(/\s/g, '');
+
+  if (!clean) {
+    dot.className  = 'ds-section-dot';
+    rail.className = 'rail-icon';
+    bdot.className = 'ds-dot';
+    if (hint) {
+      hint.className = 'ds-hint';
+      hint.textContent = dotId.includes('header')
+        ? 'No header set — PDF will have no top branding'
+        : 'No footer set — PDF will have no bottom branding';
+    }
+    return;
+  }
+
+  const decoded = safeB64Decode(val);
+  if (decoded === null) {
+    dot.className  = 'ds-section-dot error';
+    rail.className = 'rail-icon error';
+    bdot.className = 'ds-dot error';
+    if (hint) { hint.className = 'ds-hint error'; hint.textContent = '&#9888; Invalid code — please check and try again'; }
+  } else {
+    dot.className  = 'ds-section-dot set';
+    rail.className = 'rail-icon set';
+    bdot.className = 'ds-dot set';
+    if (hint) { hint.className = 'ds-hint success'; hint.textContent = '&#10003; Set — will appear on every page of the PDF'; }
+  }
+  updatePayloadIfOpen();
+};
+
+// ── PDF payload wiring ────────────────────────────────────────────────────────
+// Override generatePdf to include header/footer if set
+const _origGeneratePdf = generatePdf;
 async function generatePdf() {
   generateBtn.disabled = true;
   generateBtn.classList.add('loading');
@@ -3572,9 +3864,9 @@ async function generatePdf() {
     const footerVal = document.getElementById('footer-b64').value.trim();
 
     const payload = { templateEncoded };
-    if (cssEncoded) payload.cssEncoded = cssEncoded;
-    if (headerVal)  payload.headerEncoded = headerVal.replace(/\s/g, '');
-    if (footerVal)  payload.footerEncoded = footerVal.replace(/\s/g, '');
+    if (cssEncoded)  payload.cssEncoded = cssEncoded;
+    if (headerVal)   payload.headerEncoded = headerVal.replace(/\s/g, '');
+    if (footerVal)   payload.footerEncoded = footerVal.replace(/\s/g, '');
 
     if (documentType) {
       payload.documentType = documentType;
@@ -3606,183 +3898,44 @@ async function generatePdf() {
   }
 }
 
-// ── Doc Settings Drawer ────────────────────────────────────────────────────────
-let drawerState = 'hidden';
+// ── Payload inspector ─────────────────────────────────────────────────────────
 let payloadOpen = false;
-const drawer = document.getElementById('doc-drawer');
-const dsBtn  = document.getElementById('docSettingsBtn');
 
-function setDrawerState(state) {
-  drawerState = state;
-  drawer.classList.remove('rail', 'hidden');
-  if (state === 'rail')   drawer.classList.add('rail');
-  if (state === 'hidden') drawer.classList.add('hidden');
-  dsBtn.classList.toggle('drawer-open', state === 'expanded');
-  const chevron = drawer.querySelector('.drawer-chevron');
-  if (chevron) chevron.title = state === 'expanded' ? 'Collapse to icons' : 'Expand';
-  updatePayloadIfOpen();
-}
-window.cycleDrawer  = () => {
-  if      (drawerState === 'expanded') setDrawerState('rail');
-  else if (drawerState === 'rail')     setDrawerState('hidden');
-  else                                 setDrawerState('expanded');
-};
-window.expandDrawer = () => setDrawerState('expanded');
-setDrawerState('hidden');
-
-// ── Base64 helpers ─────────────────────────────────────────────────────────────
-function safeB64Decode(str) {
-  try {
-    const clean  = str.replace(/\s/g, '');
-    if (!clean) return null;
-    const padded = clean + '===='.slice(0, (4 - clean.length % 4) % 4);
-    return decodeURIComponent(escape(atob(padded)));
-  } catch {
-    try { return atob(str.replace(/\s/g, '')); } catch { return null; }
-  }
-}
-function safeB64Encode(str) {
-  try { return btoa(unescape(encodeURIComponent(str))); }
-  catch { return btoa(str); }
-}
-
-// ── Template import / export ───────────────────────────────────────────────────
-let pendingDecoded = '';
-window.handleTemplateB64 = function(val) {
-  const input = document.getElementById('tpl-b64-input');
-  const hint  = document.getElementById('tpl-hint');
-  const dot   = document.getElementById('dot-template');
-  const rail  = document.getElementById('rail-template');
-  const bdot  = document.getElementById('btn-dot-template');
-  const clean = val.replace(/\s/g, '');
-  if (!clean) {
-    input.className = 'ds-textarea';
-    hint.className  = 'ds-hint';
-    hint.textContent = 'Paste a code string from your team or system';
-    dot.className  = 'ds-section-dot';
-    rail.className = 'rail-icon';
-    bdot.className = 'ds-dot';
-    pendingDecoded = '';
-    return;
-  }
-  const decoded = safeB64Decode(val);
-  if (decoded === null) {
-    input.className  = 'ds-textarea invalid';
-    hint.className   = 'ds-hint error';
-    hint.textContent = "That doesn’t look right — double-check the code and try again";
-    dot.className  = 'ds-section-dot error';
-    rail.className = 'rail-icon error';
-    bdot.className = 'ds-dot error';
-    pendingDecoded = '';
-  } else {
-    input.className  = 'ds-textarea valid';
-    hint.className   = 'ds-hint success';
-    hint.textContent = `✓ Code looks good (${decoded.length} characters) — click “Load into editor” to apply`;
-    dot.className  = 'ds-section-dot set';
-    rail.className = 'rail-icon set';
-    bdot.className = 'ds-dot set';
-    pendingDecoded = decoded;
-  }
-};
-window.applyTemplateB64 = function() {
-  if (!pendingDecoded) {
-    const val = document.getElementById('tpl-b64-input').value;
-    if (!val.trim()) return;
-    const decoded = safeB64Decode(val);
-    if (!decoded) return;
-    pendingDecoded = decoded;
-  }
-  jar.updateCode(pendingDecoded);
-  updatePreview();
-  const scroll = document.getElementById('editor-scroll');
-  scroll.classList.remove('editor-flash');
-  void scroll.offsetWidth;
-  scroll.classList.add('editor-flash');
-  setTimeout(() => scroll.classList.remove('editor-flash'), 500);
-  updatePayloadIfOpen();
-};
-window.exportTemplateB64 = function() {
-  const code = jar.toString();
-  if (!code.trim()) return;
-  const encoded = safeB64Encode(code);
-  const input   = document.getElementById('tpl-b64-input');
-  input.value   = encoded;
-  handleTemplateB64(encoded);
-  updatePayloadIfOpen();
-};
-window.clearTemplateB64 = function() {
-  document.getElementById('tpl-b64-input').value = '';
-  handleTemplateB64('');
-  updatePayloadIfOpen();
-};
-
-// ── Header / footer dot updates ────────────────────────────────────────────────
-window.updateFieldDot = function(dotId, railId, btnDotId, val, hintId) {
-  const dot  = document.getElementById(dotId);
-  const rail = document.getElementById(railId);
-  const bdot = document.getElementById(btnDotId);
-  const hint = document.getElementById(hintId);
-  const clean = val.replace(/\s/g, '');
-  if (!clean) {
-    dot.className  = 'ds-section-dot';
-    rail.className = 'rail-icon';
-    bdot.className = 'ds-dot';
-    if (hint) {
-      hint.className   = 'ds-hint';
-      hint.textContent = dotId.includes('header')
-        ? 'No header set — PDF will have no top branding'
-        : 'No footer set — PDF will have no bottom branding';
-    }
-    return;
-  }
-  const decoded = safeB64Decode(val);
-  if (decoded === null) {
-    dot.className  = 'ds-section-dot error';
-    rail.className = 'rail-icon error';
-    bdot.className = 'ds-dot error';
-    if (hint) { hint.className = 'ds-hint error'; hint.textContent = 'Invalid code — please check and try again'; }
-  } else {
-    dot.className  = 'ds-section-dot set';
-    rail.className = 'rail-icon set';
-    bdot.className = 'ds-dot set';
-    if (hint) { hint.className = 'ds-hint success'; hint.textContent = '✓ Set — will appear on every page of the PDF'; }
-  }
-  updatePayloadIfOpen();
-};
-
-// ── Payload inspector ──────────────────────────────────────────────────────────
 function buildPayloadPreview() {
+  const templateEncoded = toBase64(jar.toString());
+  const cssContent = cssEditorEl.value.trim();
+  const headerVal  = document.getElementById('header-b64').value.trim();
+  const footerVal  = document.getElementById('footer-b64').value.trim();
+  const data       = parseSampleData();
+  const docType    = dataSourceSelect.value;
+
   const payload = {};
-  payload.templateEncoded = toBase64(jar.toString()).substring(0, 32) + '…';
-  const css = cssEditorEl.value.trim();
-  if (css) payload.cssEncoded = toBase64(css).substring(0, 20) + '…';
-  const h = document.getElementById('header-b64').value.trim();
-  if (h) payload.headerEncoded = h.substring(0, 20) + '…';
-  const f = document.getElementById('footer-b64').value.trim();
-  if (f) payload.footerEncoded = f.substring(0, 20) + '…';
-  const docType = dataSourceSelect.value;
+  payload.templateEncoded = templateEncoded.substring(0, 32) + '…';
+  if (cssContent) payload.cssEncoded = toBase64(cssContent).substring(0, 20) + '…';
+  if (headerVal)  payload.headerEncoded = headerVal.substring(0, 20) + '…';
+  if (footerVal)  payload.footerEncoded = footerVal.substring(0, 20) + '…';
   if (docType) {
     payload.documentType = docType;
-  } else {
-    const data = parseSampleData();
-    if (Object.keys(data).length) payload.docPropertiesJsonData = data;
+  } else if (Object.keys(data).length > 0) {
+    payload.docPropertiesJsonData = data;
   }
   return JSON.stringify(payload, null, 2);
 }
+
 window.togglePayload = function() {
   payloadOpen = !payloadOpen;
   document.getElementById('payload-block').style.display = payloadOpen ? '' : 'none';
-  document.getElementById('payload-arrow').classList.toggle('open', payloadOpen);
+  const arrow = document.getElementById('payload-arrow');
+  arrow.classList.toggle('open', payloadOpen);
   if (payloadOpen) document.getElementById('payload-pre').textContent = buildPayloadPreview();
 };
+
 window.copyPayload = function() {
-  const h = document.getElementById('header-b64').value.trim();
-  const f = document.getElementById('footer-b64').value.trim();
   const full = JSON.stringify({
     templateEncoded: toBase64(jar.toString()),
     ...(cssEditorEl.value.trim() ? { cssEncoded: toBase64(cssEditorEl.value.trim()) } : {}),
-    ...(h ? { headerEncoded: h.replace(/\s/g, '') } : {}),
-    ...(f ? { footerEncoded: f.replace(/\s/g, '') } : {}),
+    ...(document.getElementById('header-b64').value.trim() ? { headerEncoded: document.getElementById('header-b64').value.replace(/\s/g,'') } : {}),
+    ...(document.getElementById('footer-b64').value.trim() ? { footerEncoded: document.getElementById('footer-b64').value.replace(/\s/g,'') } : {}),
   }, null, 2);
   if (navigator.clipboard) {
     navigator.clipboard.writeText(full).then(() => {
@@ -3791,32 +3944,10 @@ window.copyPayload = function() {
     });
   }
 };
+
 function updatePayloadIfOpen() {
   if (payloadOpen) document.getElementById('payload-pre').textContent = buildPayloadPreview();
 }
-
-generateBtn.addEventListener('click', generatePdf);
-
-document.addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-    e.preventDefault();
-    generatePdf();
-  }
-});
-
-function showError(msg) {
-  errorMsgEl.textContent = msg;
-  errorMsgEl.classList.add('visible');
-  setTimeout(hideError, 6000);
-}
-function hideError() {
-  errorMsgEl.classList.remove('visible');
-}
-
-// ── Sidebar panel toggle ──────────────────────────────────────────────────────
-window.togglePanel = function(header) {
-  header.closest('.side-panel').classList.toggle('collapsed');
-};
 
 // ── Drag-to-resize ────────────────────────────────────────────────────────────
 let dragging = false;
