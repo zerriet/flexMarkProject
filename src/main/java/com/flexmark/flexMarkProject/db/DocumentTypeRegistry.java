@@ -64,16 +64,16 @@ public class DocumentTypeRegistry {
                 Map.of(AGREEMENT_ID_PARAM, 1)
             ),
 
-            // borrower object → {{borrower.companyName}}, {{borrower.reg}}, {{borrower.address}},
-            //                   {{borrower.type}}, {{borrower.signatory}}, {{borrower.designation}}
+            // borrower object → {{borrower.companyName}}, {{borrower.registrationNumber}}, {{borrower.address}},
+            //                   {{borrower.type}}, {{borrower.authorisedSignatory}}, {{borrower.designation}}
             new QueryDefinition(
                 "borrower",
                 """
                 SELECT company_name          AS "companyName",
-                       registration_number   AS "reg",
+                       registration_number   AS "registrationNumber",
                        registered_address    AS "address",
                        business_type         AS "type",
-                       authorised_signatory  AS "signatory",
+                       authorised_signatory  AS "authorisedSignatory",
                        signatory_designation AS "designation",
                        email,
                        contact_number        AS "contactNumber"
