@@ -394,7 +394,7 @@ public class MarkdownService {
 
             // Extract the body content from the parsed footer
             String parsedFooter = footerDoc.body().html();
-            doc.body().prepend(parsedFooter);
+            doc.body().append(parsedFooter);
 
             logger.debug("Footer injected successfully");
         }

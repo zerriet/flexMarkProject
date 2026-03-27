@@ -10,7 +10,8 @@ VALUES (1, 'BLA-2026-03-00847', '24 March 2026', 'SGD', '500,000.00',
     '4.75', '12', '42,837.15', 'Working Capital & Equipment Procurement', 'Fixed Rate Term Loan',
     '1 April 2026', '1 May 2026', '1 April 2027', '2,500.00',
     '601-XXXXXX-001', '1.50', '6',
-    '500,000.00', '14,045.80', '514,045.80');
+    '500,000.00', '14,045.80', '514,045.80')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO borrowers (id, loan_agreement_id, company_name, registration_number,
     registered_address, business_type, authorised_signatory, signatory_designation,
@@ -18,7 +19,8 @@ INSERT INTO borrowers (id, loan_agreement_id, company_name, registration_number,
 VALUES (1, 1, 'Meridian Tech Solutions Pte. Ltd.', '202212345K',
     '18 Cross Street, #08-04 China Square Central, Singapore 048423',
     'Private Limited Company', 'Tan Wei Liang', 'Director',
-    'weilian.tan@meridiantech.com.sg', '+65 6221 8800');
+    'weilian.tan@meridiantech.com.sg', '+65 6221 8800')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO repayment_schedule (id, loan_agreement_id, installment_no, due_date, opening_balance, principal, interest, instalment, closing_balance) VALUES
 ( 1, 1,  '1',  '1 May 2026',  '500,000.00', '40,858.98', '1,978.17', '42,837.15', '459,141.02'),
@@ -32,11 +34,14 @@ INSERT INTO repayment_schedule (id, loan_agreement_id, installment_no, due_date,
 ( 9, 1,  '9',  '1 Jan 2027',  '168,571.39', '42,168.69',   '668.46', '42,837.15', '126,402.70'),
 (10, 1, '10',  '1 Feb 2027',  '126,402.70', '42,335.34',   '501.81', '42,837.15',  '84,067.36'),
 (11, 1, '11',  '1 Mar 2027',   '84,067.36', '42,502.65',   '334.50', '42,837.15',  '41,564.71'),
-(12, 1, '12',  '1 Apr 2027',   '41,564.71', '41,564.71',   '164.62', '41,729.33',       '0.00');
+(12, 1, '12',  '1 Apr 2027',   '41,564.71', '41,564.71',   '164.62', '41,729.33',       '0.00')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO loan_security (id, loan_agreement_id, security_type, description)
 VALUES (1, 1, 'Personal Guarantee',
-    'Unlimited personal guarantee provided by Tan Wei Liang (NRIC: SXXXXXXXA), Director of the Borrower');
+    'Unlimited personal guarantee provided by Tan Wei Liang (NRIC: SXXXXXXXA), Director of the Borrower')
+ON CONFLICT DO NOTHING;
 
 INSERT INTO bank_officers (id, loan_agreement_id, bank_name, officer_name, officer_title)
-VALUES (1, 1, 'Demo Bank Ltd.', 'Sarah Lim Mei Ling', 'Senior Relationship Manager, Business Banking');
+VALUES (1, 1, 'Demo Bank Ltd.', 'Sarah Lim Mei Ling', 'Senior Relationship Manager, Business Banking')
+ON CONFLICT DO NOTHING;

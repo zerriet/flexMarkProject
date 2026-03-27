@@ -4,6 +4,31 @@
 
 ## [Unreleased] — 2026-03-27
 
+### Bug Fix: Footer Injected at Top of Document Instead of Bottom
+
+`configureFinalDom()` in `MarkdownService.java` used `doc.body().prepend()` for both the header and footer. Because footer was prepended first and header prepended after, the rendered order was: **header → footer → content** — the footer appeared immediately below the header on every document.
+
+**Fix:** Changed footer injection from `prepend` to `append` so the footer lands after all body content.
+
+| File | Change |
+|---|---|
+| `src/main/java/com/flexmark/flexMarkProject/service/MarkdownService.java` | Line 397: `doc.body().prepend(parsedFooter)` → `doc.body().append(parsedFooter)` |
+
+---
+
+### Fix: Spring Boot Version Rollback & Dependency Correction
+
+Resolved compile and runtime failures introduced by an incompatible Spring Boot 4.0.0 parent version during the Java upgrade branch.
+
+| File | Change |
+|---|---|
+| `pom.xml` | Spring Boot parent version: `4.0.0` → `3.5.12` |
+| `pom.xml` | Dependency artifact: `spring-boot-starter-webmvc` → `spring-boot-starter-web` (`webmvc` is not a published starter artifact; `web` is the correct name) |
+
+Spring Boot 3.5.12 is the latest stable 3.x release and is compatible with Java 21 and the current iText7 / Springdoc dependency set.
+
+---
+
 ### Enhancement: Air-Gap / Offline Frontend (CDN Libraries Inlined)
 
 Removes all CDN dependencies from `src/main/resources/static/index.html` so the editor works in fully isolated (air-gapped) environments with no outbound internet access.
